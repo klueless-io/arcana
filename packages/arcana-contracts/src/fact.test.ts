@@ -83,12 +83,37 @@ describe('FactSchema (sentence-form + optional triple decomposition)', () => {
 });
 
 describe('ContradictionSchema', () => {
-  it('round-trips a valid Contradiction', () => {
+  it('round-trips a minimal Contradiction (no rationale, no resolution)', () => {
     const sample: Contradiction = {
       id: 'cont_1',
       factAId: 'fact_1',
       factBId: 'fact_2',
       status: 'pending',
+      createdAt: '2026-05-18T08:00:00.000Z',
+    };
+    expect(ContradictionSchema.parse(sample)).toEqual(sample);
+  });
+
+  it('round-trips a Contradiction with rationale (detection input)', () => {
+    const sample: Contradiction = {
+      id: 'cont_2',
+      factAId: 'fact_1',
+      factBId: 'fact_2',
+      status: 'pending',
+      rationale: 'Fact A says David lives in Sydney; Fact B says David lives in Melbourne. Mutually exclusive locations.',
+      createdAt: '2026-05-18T08:00:00.000Z',
+    };
+    expect(ContradictionSchema.parse(sample)).toEqual(sample);
+  });
+
+  it('round-trips a Contradiction with rationale and resolution (full lifecycle)', () => {
+    const sample: Contradiction = {
+      id: 'cont_3',
+      factAId: 'fact_1',
+      factBId: 'fact_2',
+      status: 'user-resolved',
+      rationale: 'Conflicting location facts.',
+      resolution: 'User confirmed Fact B is current; Fact A superseded.',
       createdAt: '2026-05-18T08:00:00.000Z',
     };
     expect(ContradictionSchema.parse(sample)).toEqual(sample);

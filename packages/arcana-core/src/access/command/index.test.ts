@@ -28,7 +28,8 @@ describe('createCommand surface', () => {
     expect(typeof api.upsertEntity).toBe('function');
     expect(typeof api.deleteEntity).toBe('function');
     expect(typeof api.recordFact).toBe('function');
-    expect(typeof api.correctFact).toBe('function');
+    expect(typeof api.markFactSuperseded).toBe('function');
+    expect(typeof api.storeContradiction).toBe('function');
     expect(typeof api.linkNodes).toBe('function');
     expect(typeof api.updateMemory).toBe('function');
     expect(typeof api.pin).toBe('function');
@@ -353,13 +354,85 @@ describe('command.moveToTier (now wraps updateMemory)', () => {
   });
 });
 
-describe('still-stubbed command methods', () => {
-  it('correctFact throws NotImplementedError', async () => {
-    await expect(api.correctFact('fact_1', 'new')).rejects.toThrow(
-      NotImplementedError,
+describe('command.markFactSuperseded', () => {
+  it('marks an existing fact as superseded by another', async () => {
+    const oldId = await api.recordFact({
+      fact: 'David lives in Sydney',
+      entity: 'David',
+      confidence: 0.9,
+      sourceType: 'chat',
+    });
+    const newId = await api.recordFact({
+      fact: 'David lives in Melbourne',
+      entity: 'David',
+      confidence: 0.95,
+      sourceType: 'chat',
+    });
+    await api.markFactSuperseded(oldId, newId);
+    const facts = await structured.getFactsForEntity('David');
+    const old = facts.find((f) => f.id === oldId);
+    const updated = facts.find((f) => f.id === newId);
+    expect(old?.isLatest).toBe(false);
+    expect(old?.supersededBy).toBe(newId);
+    expect(updated?.isLatest).toBe(true);
+    expect(updated?.supersededBy).toBeUndefined();
+  });
+
+  it('throws when oldFactId does not exist', async () => {
+    await expect(
+      api.markFactSuperseded('missing', 'also-missing'),
+    ).rejects.toThrow();
+  });
+});
+
+describe('command.storeContradiction', () => {
+  it('persists a minimal contradiction with default status=pending', async () => {
+    const id = await api.storeContradiction({
+      factAId: 'fact_a',
+      factBId: 'fact_b',
+    });
+    expect(id).toMatch(/^[0-9a-f-]{36}$/);
+    const all = await structured.listContradictions();
+    expect(all).toHaveLength(1);
+    expect(all[0]?.id).toBe(id);
+    expect(all[0]?.status).toBe('pending');
+    expect(all[0]?.rationale).toBeUndefined();
+  });
+
+  it('persists a contradiction with rationale', async () => {
+    const id = await api.storeContradiction({
+      factAId: 'fact_a',
+      factBId: 'fact_b',
+      rationale: 'Mutually exclusive locations claimed for David.',
+    });
+    const all = await structured.listContradictions();
+    expect(all[0]?.id).toBe(id);
+    expect(all[0]?.rationale).toBe(
+      'Mutually exclusive locations claimed for David.',
     );
   });
 
+  it('honors explicit status override', async () => {
+    await api.storeContradiction({
+      factAId: 'fact_a',
+      factBId: 'fact_b',
+      status: 'auto-resolved',
+    });
+    const all = await structured.listContradictions('auto-resolved');
+    expect(all).toHaveLength(1);
+  });
+
+  it('returns a UUID that can be queried back', async () => {
+    const id = await api.storeContradiction({
+      factAId: 'fact_a',
+      factBId: 'fact_b',
+    });
+    const pending = await structured.listContradictions('pending');
+    expect(pending.find((c) => c.id === id)).toBeDefined();
+  });
+});
+
+describe('still-stubbed command methods', () => {
   it('deleteMemory throws NotImplementedError', async () => {
     await expect(api.deleteMemory('mem_1')).rejects.toThrow(NotImplementedError);
   });

@@ -56,12 +56,21 @@ export const ContradictionStatusSchema = z.enum([
 ]);
 export type ContradictionStatus = z.infer<typeof ContradictionStatusSchema>;
 
+/**
+ * Contradiction shape rationale (see ADR 006):
+ * - `rationale` (optional) captures WHY the contradiction was flagged —
+ *   typically the LLM-extracted explanation. Distinct from `resolution`:
+ *     - `rationale` = why detected (input, set at create time)
+ *     - `resolution` = how resolved (output, set when status transitions)
+ *   They are separate axes; conflating them would lose signal.
+ */
 export const ContradictionSchema = z
   .object({
     id: z.string().min(1),
     factAId: z.string().min(1),
     factBId: z.string().min(1),
     status: ContradictionStatusSchema,
+    rationale: z.string().optional(),
     resolution: z.string().optional(),
     createdAt: z.string().datetime(),
   })

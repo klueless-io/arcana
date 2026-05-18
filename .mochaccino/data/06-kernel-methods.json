@@ -44,7 +44,7 @@
         { "name": "queryFacts", "status": "implemented", "driven_by": "ADR 004 schema correction (in anticipation of KyberBot module #4 + Kybernesis Brain fact pipeline)", "commit": "TBD", "notes": "Reads via structured.getFactsForEntity; wraps in fresh QueryResult envelope. Sentence-form and triple-decomposed facts both queryable." },
         { "name": "getNeighbors", "status": "stubbed", "driven_by": null },
         { "name": "stats", "status": "stubbed", "driven_by": null },
-        { "name": "listContradictions", "status": "stubbed", "driven_by": null },
+        { "name": "listContradictions", "status": "stubbed", "driven_by": null, "notes": "provider-level surface exists; kernel-level facade not yet exposed" },
         { "name": "listInsights", "status": "stubbed", "driven_by": null },
         { "name": "readBlock", "status": "stubbed", "driven_by": null },
         { "name": "getBlockHistory", "status": "stubbed", "driven_by": null }
@@ -61,25 +61,27 @@
         { "name": "updateMemory", "status": "implemented", "driven_by": "ADR 005 (memory is not append-only; David's architectural audit)", "commit": "TBD", "notes": "Partial update; contentHash recomputed when content changes; scopes replaced not merged. Unblocks pin/moveToTier (now wrappers around this) and the DVR-UT-006 orphan-mirror fix." },
         { "name": "pin", "status": "implemented", "driven_by": "ADR 005 (became real once updateMemory landed)", "commit": "TBD", "notes": "Thin wrapper: updateMemory(id, { isPinned: true })." },
         { "name": "moveToTier", "status": "implemented", "driven_by": "ADR 005 (became real once updateMemory landed)", "commit": "TBD", "notes": "Thin wrapper: updateMemory(id, { tier })." },
-        { "name": "correctFact", "status": "stubbed", "driven_by": null },
+        { "name": "markFactSuperseded", "status": "implemented", "driven_by": "kyberbot module #11 (sleep/observe.ts supersede path)", "commit": "TBD", "notes": "Pure-link op: updates isLatest=false + supersededBy=newFactId on the old fact. New fact must already exist (typically via recordFact). ADR 006." },
+        { "name": "storeContradiction", "status": "implemented", "driven_by": "kyberbot module #11 (sleep/observe.ts createContradiction path)", "commit": "TBD", "notes": "Kernel mints id + createdAt; status defaults 'pending'; rationale optional. ADR 006." },
         { "name": "deleteMemory", "status": "stubbed", "driven_by": null },
         { "name": "updateBlock", "status": "stubbed", "driven_by": null }
       ]
     }
   ],
   "summary": {
-    "implemented_count": 9,
-    "stubbed_count": 12,
-    "total_kernel_methods": 21,
+    "implemented_count": 11,
+    "stubbed_count": 14,
+    "total_kernel_methods": 25,
     "consumers_actively_adopting": ["kyberbot (arcana-adoption branch)"],
-    "kyberbot_modules_closed": 4,
-    "kyberbot_modules_remaining": 11,
+    "kyberbot_modules_closed": 10,
+    "kyberbot_modules_remaining": 5,
     "kyberbot_provider_adapters_built": ["OpenAIEmbeddingProvider", "ChromaDBVectorStore"],
     "contract_evolutions": [
-      "v0.1.0 initial schema (21 kernel methods, FactSchema required triples, no updateMemory)",
+      "v0.1.0 initial schema (FactSchema required triples, no updateMemory)",
       "v0.x: deleteEntity added to StructuredStore (ADR 002)",
       "v0.x: FactSchema corrected — fact (sentence) required, attribute/value optional (ADR 004 supersedes ADR 003)",
-      "v0.x: updateMemory added to StructuredStore + command (ADR 005 — Memory is not append-only; unblocks pin/moveToTier and DVR-UT-006 orphan-mirror fix)"
+      "v0.x: updateMemory added to StructuredStore + command (ADR 005 — Memory is not append-only; unblocks pin/moveToTier and DVR-UT-006 orphan-mirror fix)",
+      "v0.x: markFactSuperseded + storeContradiction added; Contradiction.rationale added; correctFact stub deleted (ADR 006 — driven by kyberbot module #11)"
     ]
   }
 }

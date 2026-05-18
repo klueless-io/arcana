@@ -67,6 +67,13 @@ export interface StructuredStore {
   // Fact
   storeFact(fact: Fact): Promise<void>;
   getFactsForEntity(entity: string, attribute?: string): Promise<Fact[]>;
+  /**
+   * Mark a fact as superseded by another. Updates `isLatest=false` and
+   * `supersededBy=newFactId` on the old fact. The new fact must already
+   * exist (created via `storeFact`); this is a pure link operation.
+   * See ADR 006.
+   */
+  markFactSuperseded(oldFactId: string, newFactId: string): Promise<void>;
 
   // Contradiction
   storeContradiction(contradiction: Contradiction): Promise<void>;

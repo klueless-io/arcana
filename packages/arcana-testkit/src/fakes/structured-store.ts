@@ -116,6 +116,19 @@ export function createFakeStructuredStore(): StructuredStore {
           (attribute === undefined || f.attribute === attribute),
       );
     },
+    markFactSuperseded: async (oldFactId: string, newFactId: string) => {
+      const existing = facts.get(oldFactId);
+      if (!existing) {
+        throw new Error(
+          `fake StructuredStore: markFactSuperseded called for unknown id ${oldFactId}`,
+        );
+      }
+      facts.set(oldFactId, {
+        ...existing,
+        isLatest: false,
+        supersededBy: newFactId,
+      });
+    },
 
     storeContradiction: async (contradiction: Contradiction) => {
       contradictions.set(contradiction.id, contradiction);

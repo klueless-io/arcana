@@ -22,7 +22,7 @@
         { "name": "Entity", "status": "complete", "test_file": "entity.test.ts" },
         { "name": "Edge", "status": "complete", "test_file": "edge.test.ts" },
         { "name": "Fact", "status": "complete", "test_file": "fact.test.ts", "evolution": ["v0.1 initial: required (entity, attribute, value) triple", "v0.x: ADR 004 — fact (sentence) required; attribute/value optional. Fits both real-world fact extractors (KyberBot sentences, Kybernesis Brain sentences-with-optional-decomposition)."] },
-        { "name": "Contradiction", "status": "complete", "test_file": "fact.test.ts" },
+        { "name": "Contradiction", "status": "complete", "test_file": "fact.test.ts", "evolution": ["v0.1 initial: id, factAId, factBId, status, resolution?, createdAt", "v0.x: ADR 006 — +rationale?: string (why detected, distinct from resolution which is how-resolved). Driven by KyberBot module #11 surfacing real Haiku-extracted rationale data."] },
         { "name": "Insight", "status": "complete", "test_file": "insight.test.ts" },
         { "name": "EntityProfile", "status": "complete", "test_file": "insight.test.ts" },
         { "name": "AgentSelf", "status": "complete", "test_file": "agent-self.test.ts" }
@@ -32,7 +32,7 @@
       "id": "provider_interfaces",
       "label": "Provider interfaces (TS)",
       "rows": [
-        { "name": "StructuredStore", "status": "complete", "test_file": "providers.test.ts", "evolution": ["v0.1 initial", "v0.x: +deleteEntity (ADR 002, 2026-05-18, driven by kyberbot module #2)", "v0.x: +updateMemory (ADR 005, 2026-05-18, Memory not append-only; unblocks pin/moveToTier and orphan-mirror fix)"] },
+        { "name": "StructuredStore", "status": "complete", "test_file": "providers.test.ts", "evolution": ["v0.1 initial", "v0.x: +deleteEntity (ADR 002, 2026-05-18, driven by kyberbot module #2)", "v0.x: +updateMemory (ADR 005, 2026-05-18, Memory not append-only; unblocks pin/moveToTier and orphan-mirror fix)", "v0.x: +markFactSuperseded (ADR 006, 2026-05-18, driven by kyberbot module #11 supersede write-path)"] },
         { "name": "VectorStore", "status": "complete", "test_file": "providers.test.ts" },
         { "name": "EmbeddingProvider", "status": "complete", "test_file": "providers.test.ts" },
         { "name": "LLMProvider", "status": "complete", "test_file": "providers.test.ts" },

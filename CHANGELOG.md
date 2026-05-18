@@ -57,6 +57,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `command.pin(memoryId)` and `command.moveToTier(memoryId, tier)` move from stubbed to implemented (thin wrappers around `updateMemory`).
 - Resolves DVR-UT-006 orphan-mirror flagged by KyberBot — fix path is option (b): KyberBot's wrapper checks `arcana_memory_id`, branches to `updateMemory` (existing) or `ingest.storeMemory` (new).
 
+### Contract addition + deletion — supersede + contradiction (ADR 006)
+- Driven by KyberBot module #11 (sleep/observe.ts) audit. Two new write paths surfaced (supersede + create-contradiction); one stub deleted as dead surface.
+- **Added** `StructuredStore.markFactSuperseded(oldFactId, newFactId)` — pure-link op, sets old fact `isLatest=false, supersededBy=newFactId`.
+- **Added** `command.markFactSuperseded(oldFactId, newFactId)` — kernel facade with logging.
+- **Added** `command.storeContradiction(input)` — kernel facade over the existing provider-level `storeContradiction`. Mints id + createdAt; status defaults to `'pending'`; accepts optional `rationale`. Returns the new contradiction id.
+- **Schema change**: `ContradictionSchema` gains optional `rationale?: string` (why detected — distinct from `resolution` which is how-resolved). Captures KyberBot's Haiku-extracted explanation rather than discarding it.
+- **Deleted** `command.correctFact(oldFactId, newValue: string)` stub. Audit found no consumer wants combined create-and-supersede; the real pattern is `recordFact` + `markFactSuperseded`. Per ADR 005 process rule, dead surface area is removed.
+- Testkit fake `StructuredStore` gains a `markFactSuperseded` implementation.
+
 ## v0.1.0 — TBD
 
 Will be assigned when:

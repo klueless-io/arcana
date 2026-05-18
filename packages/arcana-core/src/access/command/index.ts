@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import {
+  ContradictionSchema,
   FactSchema,
   MemorySchema,
+  type Contradiction,
+  type ContradictionStatus,
   type Fact,
   type Memory,
   type Tier,
@@ -34,6 +37,20 @@ export interface RecordFactInput {
   sourceType: FactSourceType;
   expiresAt?: string;
   scopes?: Scopes;
+}
+
+/**
+ * Input for `command.storeContradiction`. Kernel mints `id` + `createdAt`.
+ * `status` defaults to `'pending'` when omitted. `rationale` captures the
+ * detection-time explanation (typically LLM-extracted) and is optional;
+ * `resolution` is reserved for the resolve flow (out of scope for create).
+ * See ADR 006.
+ */
+export interface StoreContradictionInput {
+  factAId: string;
+  factBId: string;
+  status?: ContradictionStatus;
+  rationale?: string;
 }
 
 export interface LinkNodesOptions {
@@ -72,8 +89,20 @@ export interface CommandApi {
    * `attribute`/`value` triple decomposition is optional. See ADR 004.
    */
   recordFact(input: RecordFactInput): Promise<string>;
-  /** Supersede an existing fact with a new value. */
-  correctFact(oldFactId: string, newValue: string): Promise<string>;
+  /**
+   * Mark an existing fact as superseded by another. Pure link operation:
+   * updates `isLatest=false` and `supersededBy=newFactId` on the old fact.
+   * The new fact must already exist (typically created via `recordFact`).
+   * See ADR 006.
+   */
+  markFactSuperseded(oldFactId: string, newFactId: string): Promise<void>;
+  /**
+   * Store a contradiction between two facts. Kernel mints id + createdAt;
+   * status defaults to `'pending'`. `rationale` captures the why-detected
+   * signal (e.g., LLM-extracted explanation). Returns the new contradiction id.
+   * See ADR 006.
+   */
+  storeContradiction(input: StoreContradictionInput): Promise<string>;
   /**
    * Create a typed edge between two nodes (memory↔memory, memory↔entity,
    * or entity↔entity). Returns the edge id.
@@ -213,7 +242,40 @@ export function createCommand(deps: CommandDeps): CommandApi {
       await updateMemory(memoryId, { tier });
     },
 
-    correctFact: async () => stub('correctFact'),
+    markFactSuperseded: async (
+      oldFactId: string,
+      newFactId: string,
+    ): Promise<void> => {
+      await deps.structured.markFactSuperseded(oldFactId, newFactId);
+      deps.logger.debug('arcana.command.markFactSuperseded', {
+        oldFactId,
+        newFactId,
+      });
+    },
+
+    storeContradiction: async (
+      input: StoreContradictionInput,
+    ): Promise<string> => {
+      const candidate: Contradiction = {
+        id: randomUUID(),
+        factAId: input.factAId,
+        factBId: input.factBId,
+        status: input.status ?? 'pending',
+        rationale: input.rationale,
+        createdAt: new Date().toISOString(),
+      };
+      const validated = ContradictionSchema.parse(candidate);
+      await deps.structured.storeContradiction(validated);
+      deps.logger.debug('arcana.command.storeContradiction', {
+        id: validated.id,
+        factAId: validated.factAId,
+        factBId: validated.factBId,
+        status: validated.status,
+        hasRationale: validated.rationale !== undefined,
+      });
+      return validated.id;
+    },
+
     deleteMemory: async () => stub('deleteMemory'),
     updateBlock: async () => stub('updateBlock'),
   };
