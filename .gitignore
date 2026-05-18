@@ -8,6 +8,10 @@ dist/
 build/
 *.tsbuildinfo
 
+# Override global ignore: macOS case-insensitive match on `*.BASE.*`
+# would otherwise hide tsconfig.base.json
+!tsconfig.base.json
+
 # Bun
 bun.lockb
 

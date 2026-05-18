@@ -16,9 +16,9 @@
       "id": "v0_1_0_manual",
       "label": "v0.1.0 — Manual first publish",
       "stages": [
-        { "id": "lint", "label": "bun run lint", "status": "not_started" },
-        { "id": "typecheck", "label": "bun run typecheck", "status": "not_started" },
-        { "id": "test", "label": "bun run test", "status": "not_started" },
+        { "id": "lint", "label": "bun run lint", "status": "wired", "note": "Script exists; vacuously passes with no packages (--no-error-on-unmatched-pattern)" },
+        { "id": "typecheck", "label": "bun run typecheck", "status": "wired", "note": "Script exists; guard skips tsc -b until packages/*/tsconfig.json exists" },
+        { "id": "test", "label": "bun run test", "status": "wired", "note": "Vitest 2.1.9; passWithNoTests=true; vacuously passes with no test files" },
         { "id": "publish_contracts", "label": "npm publish @kybernesisai/arcana-contracts", "status": "not_started" },
         { "id": "publish_config", "label": "npm publish @kybernesisai/arcana-config", "status": "not_started" },
         { "id": "publish_core", "label": "npm publish @kybernesisai/arcana-core", "status": "not_started" },

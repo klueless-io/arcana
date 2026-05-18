@@ -1,0 +1,33 @@
+{
+  "name": "arcana",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Canonical knowledge-brain library for the Kybernesis product family",
+  "license": "MIT",
+  "author": "David Cruwys (AppyDave)",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20",
+    "bun": ">=1.1"
+  },
+  "scripts": {
+    "build": "bash scripts/build.sh",
+    "clean": "bash scripts/build.sh --clean",
+    "lint": "eslint --no-error-on-unmatched-pattern 'packages/**/*.ts'",
+    "lint:fix": "eslint --no-error-on-unmatched-pattern --fix 'packages/**/*.ts'",
+    "typecheck": "bash scripts/typecheck.sh",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^8.13.0",
+    "@typescript-eslint/parser": "^8.13.0",
+    "eslint": "^9.14.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

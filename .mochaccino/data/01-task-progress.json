@@ -18,7 +18,8 @@
       "label": "Done",
       "tasks": [
         { "id": "T0", "title": "Mochaccino workspace", "closed": "2026-05-18", "files": [".mochaccino/workspace.md", ".mochaccino/data/01-05"] },
-        { "id": "T1", "title": "Repo bootstrap (local)", "closed": "2026-05-18", "files": [".gitignore", "LICENSE", "README.md"], "note": "Local-only; GitHub remote deferred pending KybernesisAI org access confirmation." }
+        { "id": "T1", "title": "Repo bootstrap (local)", "closed": "2026-05-18", "files": [".gitignore", "LICENSE", "README.md"], "note": "Local-only; GitHub remote deferred pending KybernesisAI org access confirmation." },
+        { "id": "T3", "title": "Workspace shell", "closed": "2026-05-18", "files": ["package.json", "tsconfig.base.json", "eslint.config.mjs", "vitest.config.ts", "scripts/build.sh", "scripts/typecheck.sh"], "note": "Bun 1.3.10, TypeScript 5.9.3, ESLint 9.39, Vitest 2.1.9 installed. typecheck/build use guard scripts that no-op until packages exist; lint/test use --no-error-on-unmatched-pattern + passWithNoTests for graceful zero-package behavior." }
       ]
     },
     {
@@ -37,7 +38,6 @@
       "id": "todo",
       "label": "Todo",
       "tasks": [
-        { "id": "T3", "title": "Workspace shell", "depends_on": ["T1"] },
         { "id": "T4", "title": "arcana-contracts: data model schemas", "depends_on": ["T3"] },
         { "id": "T5", "title": "arcana-contracts: interfaces & envelopes", "depends_on": ["T4"] },
         { "id": "T6", "title": "arcana-config", "depends_on": ["T5"] },
