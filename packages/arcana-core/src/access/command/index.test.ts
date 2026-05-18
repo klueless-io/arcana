@@ -6,6 +6,7 @@ import {
 } from '@kybernesisai/arcana-testkit/fakes';
 import { createCommand, type CommandApi, type CommandDeps } from './index.js';
 import { NotImplementedError } from '../../errors.js';
+import { djb2Hash } from '../../util/hash.js';
 
 let deps: CommandDeps;
 let api: CommandApi;
@@ -29,6 +30,7 @@ describe('createCommand surface', () => {
     expect(typeof api.recordFact).toBe('function');
     expect(typeof api.correctFact).toBe('function');
     expect(typeof api.linkNodes).toBe('function');
+    expect(typeof api.updateMemory).toBe('function');
     expect(typeof api.pin).toBe('function');
     expect(typeof api.moveToTier).toBe('function');
     expect(typeof api.deleteMemory).toBe('function');
@@ -204,19 +206,156 @@ describe('command.recordFact', () => {
   });
 });
 
+describe('command.updateMemory', () => {
+  const baseMemory = {
+    id: 'mem_upd_1',
+    title: 'original title',
+    summary: 'original summary',
+    content: 'original content',
+    tags: ['original'],
+    priority: 0.5,
+    tier: 'warm' as const,
+    decayScore: 0,
+    accessCount: 0,
+    isPinned: false,
+    contentHash: djb2Hash('original content'),
+    source: 'cli' as const,
+  };
+
+  beforeEach(async () => {
+    await structured.storeMemory(baseMemory);
+  });
+
+  it('updates a single field, leaves others untouched', async () => {
+    await api.updateMemory('mem_upd_1', { tier: 'hot' });
+    const m = await structured.getMemory('mem_upd_1');
+    expect(m?.tier).toBe('hot');
+    expect(m?.title).toBe('original title'); // unchanged
+    expect(m?.content).toBe('original content'); // unchanged
+    expect(m?.contentHash).toBe(djb2Hash('original content')); // unchanged
+  });
+
+  it('updates multiple fields atomically', async () => {
+    await api.updateMemory('mem_upd_1', {
+      priority: 0.9,
+      isPinned: true,
+      accessCount: 5,
+    });
+    const m = await structured.getMemory('mem_upd_1');
+    expect(m?.priority).toBe(0.9);
+    expect(m?.isPinned).toBe(true);
+    expect(m?.accessCount).toBe(5);
+  });
+
+  it('recomputes contentHash when content changes', async () => {
+    const newContent = 'completely different content here';
+    await api.updateMemory('mem_upd_1', { content: newContent });
+    const m = await structured.getMemory('mem_upd_1');
+    expect(m?.content).toBe(newContent);
+    expect(m?.contentHash).toBe(djb2Hash(newContent));
+    expect(m?.contentHash).not.toBe(djb2Hash('original content'));
+  });
+
+  it('leaves contentHash unchanged when content is NOT supplied', async () => {
+    await api.updateMemory('mem_upd_1', { tier: 'archive' });
+    const m = await structured.getMemory('mem_upd_1');
+    expect(m?.contentHash).toBe(djb2Hash('original content'));
+  });
+
+  it('replaces scopes (no deep merge)', async () => {
+    // Seed with scopes
+    await api.updateMemory('mem_upd_1', {
+      scopes: { org_id: 'org_a', project_id: 'proj_1', classification: 'internal' },
+    });
+    // Update with partial scopes — should REPLACE, not merge
+    await api.updateMemory('mem_upd_1', {
+      scopes: { project_id: 'proj_2' },
+    });
+    const m = await structured.getMemory('mem_upd_1');
+    expect(m?.scopes).toEqual({ project_id: 'proj_2' });
+    // org_id and classification should be gone
+    expect(m?.scopes?.org_id).toBeUndefined();
+    expect(m?.scopes?.classification).toBeUndefined();
+  });
+
+  it('rejects an unknown tier value', async () => {
+    await expect(
+      api.updateMemory('mem_upd_1', { tier: 'frozen' as never }),
+    ).rejects.toThrow();
+  });
+
+  it('rejects an unknown top-level key', async () => {
+    await expect(
+      api.updateMemory('mem_upd_1', { totallyMadeUp: 'x' } as never),
+    ).rejects.toThrow();
+  });
+
+  it('rejects priority out of range', async () => {
+    await expect(
+      api.updateMemory('mem_upd_1', { priority: 1.5 }),
+    ).rejects.toThrow();
+  });
+});
+
+describe('command.pin (now wraps updateMemory)', () => {
+  beforeEach(async () => {
+    await structured.storeMemory({
+      id: 'mem_pin_1',
+      title: 't',
+      summary: 's',
+      content: 'c',
+      tags: [],
+      priority: 0.5,
+      tier: 'warm',
+      decayScore: 0,
+      accessCount: 0,
+      isPinned: false,
+      contentHash: djb2Hash('c'),
+      source: 'cli',
+    });
+  });
+
+  it('sets isPinned=true via updateMemory', async () => {
+    await api.pin('mem_pin_1');
+    const m = await structured.getMemory('mem_pin_1');
+    expect(m?.isPinned).toBe(true);
+  });
+});
+
+describe('command.moveToTier (now wraps updateMemory)', () => {
+  beforeEach(async () => {
+    await structured.storeMemory({
+      id: 'mem_tier_1',
+      title: 't',
+      summary: 's',
+      content: 'c',
+      tags: [],
+      priority: 0.5,
+      tier: 'warm',
+      decayScore: 0,
+      accessCount: 0,
+      isPinned: false,
+      contentHash: djb2Hash('c'),
+      source: 'cli',
+    });
+  });
+
+  it('updates tier via updateMemory', async () => {
+    await api.moveToTier('mem_tier_1', 'hot');
+    const m = await structured.getMemory('mem_tier_1');
+    expect(m?.tier).toBe('hot');
+  });
+
+  it('updates tier to archive', async () => {
+    await api.moveToTier('mem_tier_1', 'archive');
+    const m = await structured.getMemory('mem_tier_1');
+    expect(m?.tier).toBe('archive');
+  });
+});
+
 describe('still-stubbed command methods', () => {
   it('correctFact throws NotImplementedError', async () => {
     await expect(api.correctFact('fact_1', 'new')).rejects.toThrow(
-      NotImplementedError,
-    );
-  });
-
-  it('pin throws NotImplementedError', async () => {
-    await expect(api.pin('mem_1')).rejects.toThrow(NotImplementedError);
-  });
-
-  it('moveToTier throws NotImplementedError', async () => {
-    await expect(api.moveToTier('mem_1', 'hot')).rejects.toThrow(
       NotImplementedError,
     );
   });

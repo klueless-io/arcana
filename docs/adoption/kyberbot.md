@@ -190,6 +190,7 @@ KyberBot brain modules are roughly listed in dependency order. Lower-numbered it
 | 3 | `embeddings.ts` | provider wiring: `EmbeddingProvider` + `VectorStore` adapters around OpenAI + ChromaDB |
 | 4 | `fact-store.ts` | `command.recordFact` + `query.queryFacts` (the corrected FactSchema accepts sentence-form facts with optional triple decomposition — see ADR 004 which supersedes ADR 003). Local table stores `arcana_fact_id` (singular) per row. |
 | 5 | `fact-extractor.ts` | `command.recordFact` flow — populate `fact` (sentence) + `entity` (first/primary mentioned entity). If KyberBot's extractor evolves to also produce `(attribute, value)` decomposition, those fields become populated automatically. |
+| 11 / lifecycle | `pin`, `moveToTier` callers | `command.pin` and `command.moveToTier` are now real (wrappers around `command.updateMemory`). For the orphan-mirror fix (DVR-UT-006), use `command.updateMemory(arcana_memory_id, { content, title, ... })` when local row already has an Arcana id; otherwise `ingest.storeMemory(...)`. See ADR 005. |
 | 6 | `fact-contradiction.ts` | sleep step + contradiction storage |
 | 7 | `fact-temporal.ts` | temporal expiry logic in fact storage |
 | 8 | `fact-retrieval.ts` | `retrieve.factRetrieval` (multi-stage) |

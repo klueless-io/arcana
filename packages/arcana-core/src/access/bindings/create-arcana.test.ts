@@ -20,6 +20,7 @@ function makeFakeStructured(): StructuredStore {
     storeMemory: async () => {},
     getMemory: async () => null,
     listMemories: async () => [],
+    updateMemory: async () => {},
     deleteMemory: async () => {},
     storeChunks: async () => {},
     getChunksForMemory: async () => [],
@@ -99,11 +100,9 @@ describe('createArcana', () => {
       NotImplementedError,
     );
     // Note: query.queryFacts is now implemented — see access/query/index.test.ts
-    await expect(arcana.command.pin('m1')).rejects.toBeInstanceOf(
-      NotImplementedError,
-    );
-    // Note: command.upsertEntity, deleteEntity, linkNodes are now implemented
-    // (see access/command/index.test.ts). They no longer throw.
+    // Note: command.upsertEntity, deleteEntity, linkNodes, updateMemory, pin,
+    // moveToTier are now implemented (see access/command/index.test.ts).
+    // They no longer throw.
     await expect(
       arcana.ingest.ingestDocument({ format: 'markdown', content: '# x' }),
     ).rejects.toBeInstanceOf(NotImplementedError);

@@ -57,27 +57,29 @@
         { "name": "upsertEntity", "status": "implemented", "driven_by": "kyberbot module #2 (entity-graph.ts)", "commit": "17c3f48", "adopted_by": ["kyberbot/packages/cli/src/brain/entity-graph.ts (closed 2026-05-18, 6 integration tests passing)"] },
         { "name": "deleteEntity", "status": "implemented", "driven_by": "kyberbot module #2 (entity-graph.ts)", "commit": "17c3f48", "notes": "added deleteEntity to StructuredStore interface as part of this work (additive contract change — ADR 002)", "adopted_by": ["kyberbot/packages/cli/src/brain/entity-graph.ts (closed 2026-05-18)"] },
         { "name": "linkNodes", "status": "implemented", "driven_by": "kyberbot module #2 (entity-graph.ts)", "commit": "17c3f48", "notes": "renamed from linkMemories per ADR 001 (name disagreed with NodeRef signature)", "adopted_by": ["kyberbot/packages/cli/src/brain/entity-graph.ts (closed 2026-05-18)"] },
-        { "name": "recordFact", "status": "implemented", "driven_by": "ADR 004 schema correction (in anticipation of KyberBot module #4 + Kybernesis Brain fact pipeline)", "commit": "TBD", "notes": "Validates RecordFactInput via FactSchema; builds Fact with UUID id + ISO createdAt + isLatest=true defaults; persists via structured.storeFact. Auto-supersession deferred to sleep pipeline." },
+        { "name": "recordFact", "status": "implemented", "driven_by": "ADR 004 schema correction (in anticipation of KyberBot module #4 + Kybernesis Brain fact pipeline)", "commit": "fb8b3dc", "notes": "Validates RecordFactInput via FactSchema; builds Fact with UUID id + ISO createdAt + isLatest=true defaults; persists via structured.storeFact. Auto-supersession deferred to sleep pipeline." },
+        { "name": "updateMemory", "status": "implemented", "driven_by": "ADR 005 (memory is not append-only; David's architectural audit)", "commit": "TBD", "notes": "Partial update; contentHash recomputed when content changes; scopes replaced not merged. Unblocks pin/moveToTier (now wrappers around this) and the DVR-UT-006 orphan-mirror fix." },
+        { "name": "pin", "status": "implemented", "driven_by": "ADR 005 (became real once updateMemory landed)", "commit": "TBD", "notes": "Thin wrapper: updateMemory(id, { isPinned: true })." },
+        { "name": "moveToTier", "status": "implemented", "driven_by": "ADR 005 (became real once updateMemory landed)", "commit": "TBD", "notes": "Thin wrapper: updateMemory(id, { tier })." },
         { "name": "correctFact", "status": "stubbed", "driven_by": null },
-        { "name": "pin", "status": "stubbed", "driven_by": null },
-        { "name": "moveToTier", "status": "stubbed", "driven_by": null },
         { "name": "deleteMemory", "status": "stubbed", "driven_by": null },
         { "name": "updateBlock", "status": "stubbed", "driven_by": null }
       ]
     }
   ],
   "summary": {
-    "implemented_count": 6,
-    "stubbed_count": 15,
+    "implemented_count": 9,
+    "stubbed_count": 12,
     "total_kernel_methods": 21,
     "consumers_actively_adopting": ["kyberbot (arcana-adoption branch)"],
-    "kyberbot_modules_closed": 3,
-    "kyberbot_modules_remaining": 12,
+    "kyberbot_modules_closed": 4,
+    "kyberbot_modules_remaining": 11,
     "kyberbot_provider_adapters_built": ["OpenAIEmbeddingProvider", "ChromaDBVectorStore"],
     "contract_evolutions": [
-      "v0.1.0 initial schema (21 kernel methods, FactSchema required triples)",
+      "v0.1.0 initial schema (21 kernel methods, FactSchema required triples, no updateMemory)",
       "v0.x: deleteEntity added to StructuredStore (ADR 002)",
-      "v0.x: FactSchema corrected — fact (sentence) required, attribute/value optional (ADR 004 supersedes ADR 003)"
+      "v0.x: FactSchema corrected — fact (sentence) required, attribute/value optional (ADR 004 supersedes ADR 003)",
+      "v0.x: updateMemory added to StructuredStore + command (ADR 005 — Memory is not append-only; unblocks pin/moveToTier and DVR-UT-006 orphan-mirror fix)"
     ]
   }
 }

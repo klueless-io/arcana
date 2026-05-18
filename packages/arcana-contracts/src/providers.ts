@@ -37,6 +37,18 @@ export interface StructuredStore {
   storeMemory(memory: Memory): Promise<void>;
   getMemory(id: string): Promise<Memory | null>;
   listMemories(filter?: MemoryFilter): Promise<Memory[]>;
+  /**
+   * Partial update of a Memory record. Only the supplied fields are
+   * changed; everything else is left untouched. `scopes` (when supplied)
+   * REPLACES the previous scopes object — no deep merge (matches Convex's
+   * patch semantics; KyberBot wrappers can read-merge-write if column-by-
+   * column update is needed).
+   *
+   * The `id` field is immutable. `contentHash` is recomputed by the kernel
+   * when `content` is supplied — providers should NOT attempt to recompute
+   * it themselves; they trust the kernel.
+   */
+  updateMemory(id: string, fields: Partial<Omit<Memory, 'id'>>): Promise<void>;
   deleteMemory(id: string): Promise<void>;
 
   // Chunk

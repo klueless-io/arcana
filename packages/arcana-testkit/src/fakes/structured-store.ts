@@ -64,6 +64,13 @@ export function createFakeStructuredStore(): StructuredStore {
       if (filter?.limit !== undefined) results = results.slice(0, filter.limit);
       return results;
     },
+    updateMemory: async (id: string, fields: Partial<Omit<Memory, 'id'>>) => {
+      const existing = memories.get(id);
+      if (!existing) {
+        throw new Error(`fake StructuredStore: updateMemory called for unknown id ${id}`);
+      }
+      memories.set(id, { ...existing, ...fields });
+    },
     deleteMemory: async (id: string) => {
       memories.delete(id);
       chunksByMemory.delete(id);

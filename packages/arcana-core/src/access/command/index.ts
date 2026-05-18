@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import {
   FactSchema,
+  MemorySchema,
   type Fact,
+  type Memory,
   type Tier,
   type NodeRef,
   type Entity,
@@ -13,6 +15,7 @@ import {
   type Logger,
 } from '@kybernesisai/arcana-contracts';
 import { NotImplementedError } from '../../errors.js';
+import { djb2Hash } from '../../util/hash.js';
 
 /**
  * Input for `command.recordFact`. Mirrors the corrected `Fact` schema:
@@ -44,6 +47,15 @@ export interface LinkNodesOptions {
   rationale?: string;
 }
 
+/**
+ * Public shape for `command.updateMemory`. Excludes `id` (immutable) and
+ * `contentHash` (kernel-derived from content). Supplying `content` triggers
+ * automatic contentHash recomputation; consumers don't think about hashes.
+ *
+ * `scopes` replaces (not merges) the existing scopes object. See ADR 005.
+ */
+export type UpdateMemoryFields = Partial<Omit<Memory, 'id' | 'contentHash'>>;
+
 export interface CommandDeps {
   structured: StructuredStore;
   vector: VectorStore;
@@ -57,12 +69,7 @@ export interface CommandApi {
   deleteEntity(id: string): Promise<void>;
   /**
    * Record a fact. `fact` (sentence form) and `entity` are required;
-   * `attribute`/`value` triple decomposition is optional.
-   *
-   * v0.x scope: validates + persists the Fact with defaults
-   * (`id = randomUUID()`, `createdAt = now`, `isLatest = true`). Does NOT
-   * auto-supersede existing facts with matching (entity, attribute) — that
-   * comes later (sleep pipeline). Returns the new fact id.
+   * `attribute`/`value` triple decomposition is optional. See ADR 004.
    */
   recordFact(input: RecordFactInput): Promise<string>;
   /** Supersede an existing fact with a new value. */
@@ -77,6 +84,16 @@ export interface CommandApi {
     relation: string,
     opts?: LinkNodesOptions,
   ): Promise<string>;
+  /**
+   * Partial in-place update of a Memory. Only supplied fields change.
+   * `contentHash` is recomputed automatically when `content` is provided.
+   * `scopes` replaces (not merges) the previous scopes object.
+   *
+   * See ADR 005 — Memory was never append-only by design; this primitive
+   * unblocks pin / moveToTier and lets consumers update tracked fields
+   * (accessCount, decayScore, tier, content) without orphaning records.
+   */
+  updateMemory(id: string, fields: UpdateMemoryFields): Promise<void>;
   /** Pin a memory so decay/tier transitions skip it. */
   pin(memoryId: string): Promise<void>;
   /** Force-move a memory to a specific tier. */
@@ -92,6 +109,32 @@ export function createCommand(deps: CommandDeps): CommandApi {
     throw new NotImplementedError(
       `arcana-core/access.command.${method} is a v0.1 scaffold stub; real implementation lands in v0.x`,
     );
+  };
+
+  const PUBLIC_UPDATE_SCHEMA = MemorySchema.omit({
+    id: true,
+    contentHash: true,
+  })
+    .partial()
+    .strict();
+
+  const updateMemory = async (
+    id: string,
+    fields: UpdateMemoryFields,
+  ): Promise<void> => {
+    const validated = PUBLIC_UPDATE_SCHEMA.parse(fields);
+    // If content changed, the kernel recomputes contentHash. Consumers
+    // never set contentHash directly.
+    const providerFields: Partial<Omit<Memory, 'id'>> =
+      validated.content !== undefined
+        ? { ...validated, contentHash: djb2Hash(validated.content) }
+        : validated;
+    await deps.structured.updateMemory(id, providerFields);
+    deps.logger.debug('arcana.command.updateMemory', {
+      id,
+      fieldKeys: Object.keys(validated),
+      contentChanged: validated.content !== undefined,
+    });
   };
 
   return {
@@ -160,9 +203,17 @@ export function createCommand(deps: CommandDeps): CommandApi {
       return edge.id;
     },
 
+    updateMemory,
+
+    pin: async (memoryId: string): Promise<void> => {
+      await updateMemory(memoryId, { isPinned: true });
+    },
+
+    moveToTier: async (memoryId: string, tier: Tier): Promise<void> => {
+      await updateMemory(memoryId, { tier });
+    },
+
     correctFact: async () => stub('correctFact'),
-    pin: async () => stub('pin'),
-    moveToTier: async () => stub('moveToTier'),
     deleteMemory: async () => stub('deleteMemory'),
     updateBlock: async () => stub('updateBlock'),
   };

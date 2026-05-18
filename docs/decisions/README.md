@@ -32,3 +32,4 @@ Standard sections:
 - [002 — `deleteEntity` added to StructuredStore interface](./002-deleteentity-contract-addition.md)
 - [003 — Facts as memories vs facts as triples](./003-facts-as-memories-vs-facts-as-triples.md) (*superseded by 004*)
 - [004 — Fact schema: sentence required, triple decomposition optional](./004-fact-schema-optional-triple-decomposition.md)
+- [005 — Memory is not append-only; `updateMemory` is first-class](./005-memory-is-not-append-only.md)

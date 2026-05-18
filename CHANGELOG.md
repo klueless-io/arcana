@@ -50,6 +50,13 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - `recordFact` validates via the corrected FactSchema, builds the Fact with UUID id + ISO timestamp + `isLatest=true`, persists via the StructuredStore, returns the new id
   - `queryFacts` reads via `structured.getFactsForEntity`, wraps in a fresh `QueryResult` envelope
 
+### Contract addition — `updateMemory` (ADR 005)
+- **Memory is not append-only.** Architectural audit triggered by David's challenge — both real consumers (KyberBot's INSERT OR REPLACE on source_path, Kybernesis Brain's `ctx.db.patch`) update memories in place. Arcana was missing the primitive.
+- `StructuredStore.updateMemory(id, fields)` added to `arcana-contracts/src/providers.ts`.
+- `command.updateMemory(id, fields)` implemented in `arcana-core/src/access/command/`. Partial update; `contentHash` recomputed when `content` changes; `scopes` replaces (does not deep-merge — matches Convex `patch` semantics).
+- `command.pin(memoryId)` and `command.moveToTier(memoryId, tier)` move from stubbed to implemented (thin wrappers around `updateMemory`).
+- Resolves DVR-UT-006 orphan-mirror flagged by KyberBot — fix path is option (b): KyberBot's wrapper checks `arcana_memory_id`, branches to `updateMemory` (existing) or `ingest.storeMemory` (new).
+
 ## v0.1.0 — TBD
 
 Will be assigned when:
