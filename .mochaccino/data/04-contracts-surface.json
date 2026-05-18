@@ -17,15 +17,15 @@
       "label": "Data model (Zod schemas)",
       "source": "~/dev/ad/brains/kybernesis/arcana-spec.md §10",
       "rows": [
-        { "name": "Memory", "status": "not_started" },
-        { "name": "Chunk", "status": "not_started" },
-        { "name": "Entity", "status": "not_started" },
-        { "name": "Edge", "status": "not_started" },
-        { "name": "Fact", "status": "not_started" },
-        { "name": "Contradiction", "status": "not_started" },
-        { "name": "Insight", "status": "not_started" },
-        { "name": "EntityProfile", "status": "not_started" },
-        { "name": "AgentSelf", "status": "not_started" }
+        { "name": "Memory", "status": "complete", "test_file": "memory.test.ts" },
+        { "name": "Chunk", "status": "complete", "test_file": "memory.test.ts" },
+        { "name": "Entity", "status": "complete", "test_file": "entity.test.ts" },
+        { "name": "Edge", "status": "complete", "test_file": "edge.test.ts" },
+        { "name": "Fact", "status": "complete", "test_file": "fact.test.ts" },
+        { "name": "Contradiction", "status": "complete", "test_file": "fact.test.ts" },
+        { "name": "Insight", "status": "complete", "test_file": "insight.test.ts" },
+        { "name": "EntityProfile", "status": "complete", "test_file": "insight.test.ts" },
+        { "name": "AgentSelf", "status": "complete", "test_file": "agent-self.test.ts" }
       ]
     },
     {
@@ -47,7 +47,7 @@
       "rows": [
         { "name": "Logger", "status": "not_started" },
         { "name": "QueryResult<T>", "status": "not_started" },
-        { "name": "Scopes (ARP)", "status": "not_started" }
+        { "name": "Scopes (ARP)", "status": "complete", "test_file": "scopes.test.ts" }
       ]
     }
   ]

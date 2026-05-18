@@ -14,11 +14,11 @@
     "bun": ">=1.1"
   },
   "scripts": {
-    "build": "bash scripts/build.sh",
-    "clean": "bash scripts/build.sh --clean",
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
     "lint": "eslint --no-error-on-unmatched-pattern 'packages/**/*.ts'",
     "lint:fix": "eslint --no-error-on-unmatched-pattern --fix 'packages/**/*.ts'",
-    "typecheck": "bash scripts/typecheck.sh",
+    "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest"
   },

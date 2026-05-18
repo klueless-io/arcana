@@ -1,0 +1,52 @@
+import { z } from 'zod';
+import { ScopesSchema } from './scopes.js';
+
+export const TierSchema = z.enum(['hot', 'warm', 'archive']);
+export type Tier = z.infer<typeof TierSchema>;
+
+export const MemorySourceSchema = z.enum([
+  'upload',
+  'chat',
+  'connector',
+  'watched-folder',
+  'cli',
+  'channel',
+]);
+export type MemorySource = z.infer<typeof MemorySourceSchema>;
+
+export const MemorySchema = z
+  .object({
+    id: z.string().min(1),
+    title: z.string(),
+    summary: z.string(),
+    content: z.string(),
+    tags: z.array(z.string()),
+    priority: z.number().min(0).max(1),
+    tier: TierSchema,
+    decayScore: z.number().min(0).max(1),
+    accessCount: z.number().int().nonnegative(),
+    lastAccessedAt: z.string().datetime().optional(),
+    isPinned: z.boolean(),
+    contentHash: z.string(),
+    source: MemorySourceSchema,
+    scopes: ScopesSchema.optional(),
+  })
+  .strict();
+
+export type Memory = z.infer<typeof MemorySchema>;
+
+/**
+ * Chunks are sub-pieces of a Memory after text splitting. Their `layer` is
+ * kept in sync with the parent memory's tier (see arcana-spec.md §4).
+ */
+export const ChunkSchema = z
+  .object({
+    id: z.string().min(1),
+    memoryId: z.string().min(1),
+    text: z.string(),
+    vectorId: z.string().optional(),
+    layer: TierSchema,
+  })
+  .strict();
+
+export type Chunk = z.infer<typeof ChunkSchema>;
