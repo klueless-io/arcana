@@ -40,9 +40,13 @@
       "id": "arcana-core",
       "npm_name": "@kybernesisai/arcana-core",
       "role": "Kernel — createArcana() factory + ingest/retrieve/maintain/access zones (stubbed in v0.1)",
-      "depends_on": ["arcana-contracts"],
-      "status": "not_started",
-      "tasks": ["T7", "T8"]
+      "depends_on": ["@kybernesisai/arcana-contracts (workspace)"],
+      "status": "scaffolded",
+      "tasks": ["T7", "T8"],
+      "v0_1_progress": {
+        "T7_skeleton_zones": "complete (15 tests passing; zones throw NotImplementedError)",
+        "T8_createArcana_factory": "not_started"
+      }
     },
     {
       "id": "arcana-testkit",

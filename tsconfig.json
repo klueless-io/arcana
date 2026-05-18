@@ -3,6 +3,7 @@
   "files": [],
   "references": [
     { "path": "packages/arcana-contracts" },
-    { "path": "packages/arcana-config" }
+    { "path": "packages/arcana-config" },
+    { "path": "packages/arcana-core" }
   ]
 }
