@@ -32,21 +32,21 @@
       "id": "provider_interfaces",
       "label": "Provider interfaces (TS)",
       "rows": [
-        { "name": "StructuredStore", "status": "not_started" },
-        { "name": "VectorStore", "status": "not_started" },
-        { "name": "EmbeddingProvider", "status": "not_started" },
-        { "name": "LLMProvider", "status": "not_started" },
-        { "name": "RerankerProvider", "status": "not_started" },
-        { "name": "Scheduler", "status": "not_started" },
-        { "name": "JobQueue", "status": "not_started" }
+        { "name": "StructuredStore", "status": "complete", "test_file": "providers.test.ts" },
+        { "name": "VectorStore", "status": "complete", "test_file": "providers.test.ts" },
+        { "name": "EmbeddingProvider", "status": "complete", "test_file": "providers.test.ts" },
+        { "name": "LLMProvider", "status": "complete", "test_file": "providers.test.ts" },
+        { "name": "RerankerProvider", "status": "complete", "test_file": "providers.test.ts" },
+        { "name": "Scheduler", "status": "complete", "test_file": "providers.test.ts" },
+        { "name": "JobQueue", "status": "complete", "test_file": "providers.test.ts" }
       ]
     },
     {
       "id": "envelopes",
       "label": "Envelopes & utilities",
       "rows": [
-        { "name": "Logger", "status": "not_started" },
-        { "name": "QueryResult<T>", "status": "not_started" },
+        { "name": "Logger", "status": "complete", "test_file": "logger.test.ts" },
+        { "name": "QueryResult<T>", "status": "complete", "test_file": "query-result.test.ts" },
         { "name": "Scopes (ARP)", "status": "complete", "test_file": "scopes.test.ts" }
       ]
     }

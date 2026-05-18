@@ -5,3 +5,6 @@ export * from './edge.js';
 export * from './fact.js';
 export * from './insight.js';
 export * from './agent-self.js';
+export * from './logger.js';
+export * from './query-result.js';
+export * from './providers.js';

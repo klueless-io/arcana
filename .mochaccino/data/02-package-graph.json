@@ -17,12 +17,13 @@
       "npm_name": "@kybernesisai/arcana-contracts",
       "role": "Base — Zod schemas, provider interfaces, Logger, QueryResult envelope, ARP scopes",
       "depends_on": ["zod@^3.23.0"],
-      "status": "scaffolded",
+      "status": "complete",
       "tasks": ["T4", "T5"],
       "v0_1_progress": {
-        "T4_data_model_schemas": "complete (22 tests passing)",
-        "T5_interfaces_envelopes": "not_started"
-      }
+        "T4_data_model_schemas": "complete (22 tests)",
+        "T5_interfaces_envelopes": "complete (15 additional tests; total 37)"
+      },
+      "v0_1_status": "complete"
     },
     {
       "id": "arcana-config",

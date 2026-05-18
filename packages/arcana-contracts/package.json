@@ -39,6 +39,18 @@
     "./agent-self": {
       "types": "./dist/agent-self.d.ts",
       "default": "./dist/agent-self.js"
+    },
+    "./logger": {
+      "types": "./dist/logger.d.ts",
+      "default": "./dist/logger.js"
+    },
+    "./query-result": {
+      "types": "./dist/query-result.d.ts",
+      "default": "./dist/query-result.js"
+    },
+    "./providers": {
+      "types": "./dist/providers.d.ts",
+      "default": "./dist/providers.js"
     }
   },
   "files": [
