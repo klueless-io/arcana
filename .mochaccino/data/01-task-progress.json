@@ -42,12 +42,17 @@
     {
       "id": "todo",
       "label": "Todo",
+      "tasks": []
+    },
+    {
+      "id": "deferred",
+      "label": "Deferred (post-scaffold; demand-driven)",
       "tasks": [
-        { "id": "T9", "title": "arcana-testkit", "depends_on": ["T8"] },
-        { "id": "T10", "title": "arcana-providers-libsql", "depends_on": ["T9"] },
-        { "id": "T11", "title": "CI: ci.yml", "depends_on": ["T3"] },
-        { "id": "T12a", "title": "First publish (manual)", "depends_on": ["T10", "T2"] },
-        { "id": "T12b", "title": "CI: publish.yml + idempotency proof on v0.1.1", "depends_on": ["T12a"] }
+        { "id": "T9", "title": "arcana-testkit", "deferred_to": "v0.1.x", "reason": "Adoption doesn't need cross-provider compliance harness yet — only one provider will exist (lifted from KyberBot's libsql code during adoption)." },
+        { "id": "T10", "title": "arcana-providers-libsql", "deferred_to": "v0.1.x", "reason": "Real libsql provider emerges from KyberBot adoption — KyberBot's existing libsql code is the source. Don't author fresh." },
+        { "id": "T11", "title": "CI: ci.yml", "deferred_to": "when remote exists", "reason": "Local-only repo, no PR flow yet." },
+        { "id": "T12a", "title": "First publish (manual)", "deferred_to": "after KyberBot adoption validates contracts", "reason": "Local file: deps work for current consumption pattern. Publish once contracts have been stress-tested by a real consumer." },
+        { "id": "T12b", "title": "CI: publish.yml + idempotency proof", "deferred_to": "after T12a", "reason": "Follows publish flow." }
       ]
     }
   ]

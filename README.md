@@ -11,10 +11,26 @@ Arcana defines the shared memory substrate consumed by **KyberBot** (local agent
 ## Documentation
 
 - [`SPEC.md`](./SPEC.md) — the build contract: tech stack, project structure, success criteria, boundaries
-- [`PLAN.md`](./PLAN.md) — implementation plan: components, dependency order, risks, checkpoints
+- [`PLAN.md`](./PLAN.md) — implementation plan + strategy (currently: demand-driven kernel implementation)
+- [`docs/adoption/kyberbot.md`](./docs/adoption/kyberbot.md) — KyberBot adoption playbook
+- [`docs/adoption/kybernesis-brain.md`](./docs/adoption/kybernesis-brain.md) — Kybernesis Brain adoption playbook (handoff for Ian)
 - [`.mochaccino/`](./.mochaccino/) — live build documentation (refreshed at each task close)
 
 The architectural design source lives outside this repo: `~/dev/ad/brains/kybernesis/arcana-spec.md`.
+
+## Local consumption (pre-npm-publish)
+
+Until v0.1.0 publishes to npm, consumers reference Arcana packages via local `file:` deps:
+
+```json
+"dependencies": {
+  "@kybernesisai/arcana-contracts": "file:../../arcana/packages/arcana-contracts",
+  "@kybernesisai/arcana-config":    "file:../../arcana/packages/arcana-config",
+  "@kybernesisai/arcana-core":      "file:../../arcana/packages/arcana-core"
+}
+```
+
+Adjust the relative path based on the consumer's location. Each Arcana rebuild + `pnpm install` (or `npm install`) in the consumer refreshes the linked code. See the adoption playbooks above for full setup instructions per consumer.
 
 ## Packages (planned for v0.1.0)
 

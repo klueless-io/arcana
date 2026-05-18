@@ -1,96 +1,81 @@
-# Plan: Arcana v0.1.0
+# Plan: Arcana v0.1.0 → v0.x
 
-## Scope reminder
+> **Status update (2026-05-18)**: v0.1.0 scaffold is **substantially complete**. Strategy for what comes next has been revised — see "Strategy change" below.
 
-v0.1.0 = **scaffold-grade**. Packages publish, types/exports/CI wire up, but kernel methods are stubs. Real implementations are v0.x work. KyberBot adoption is v0.y work.
+## v0.1.0 scaffold — DONE
 
-## Components
+Three packages shipped, built, tested:
 
-| # | Component | Description | Depends on |
+| # | Package | Status | Tests |
 |---|---|---|---|
-| 0 | Mochaccino workspace | Initialize `arcana/.mochaccino/` with workspace.md (mode: documentation, canonical source: SPEC.md + PLAN.md + repo state). Seed empty data files for the 5 proposed views. | 1 |
-| 1 | Repo init | `git init`, GitHub repo under `KybernesisAI/arcana`, `.gitignore`, `LICENSE` (MIT), `README.md` | — |
-| 2 | Workspace shell | Root `package.json`, Bun workspace config, `tsconfig.base.json`, `eslint.config.mjs`, `vitest.config.ts` | 1 |
-| 3 | `arcana-contracts` | Zod schemas for Memory/Chunk/Entity/Edge/Fact/Contradiction/Insight/EntityProfile/AgentSelf, ARP scope fields, provider interfaces, `Logger`, `QueryResult<T>` | 2 |
-| 4 | `arcana-config` | Zod-validated loader (defaults → file → env), explicit env map | 3 |
-| 5 | `arcana-core` | `createArcana()` factory, ingest/retrieve/maintain/access zone scaffolds, all methods stubbed | 3 |
-| 6 | `arcana-testkit` | `runComplianceSuite(provider)` skeleton, fakes for every provider interface | 3, 5 |
-| 7 | `arcana-providers-libsql` | Reference `StructuredStore` impl — real libsql connect + one round-trip (storeMemory/getMemory), other methods throw NotImplementedError | 3, 6 |
-| 8 | CI: `ci.yml` | Lint + typecheck + test on PR | 2 |
-| 9 | CI: `publish.yml` | Idempotent `npm view` skip, sequential publish in dep order | 2, 3, 4, 5, 6, 7 |
-| 10a | First publish (manual) | Hand-rolled `npm publish` per package, dep order, for v0.1.0 — surfaces auth/scope/exports gotchas | 7 |
-| 10b | First CI publish | Tag v0.1.1, prove publish.yml idempotency | 9, 10a |
+| ✓ | `@kybernesisai/arcana-contracts` | Complete (T4 + T5) | 37 |
+| ✓ | `@kybernesisai/arcana-config` | Complete (T6) | 28 |
+| ✓ | `@kybernesisai/arcana-core` | Complete (T7 + T8) | 21 |
+| | **Total** | | **86 across 19 files** |
 
-**Every task also includes a `.mochaccino/data/` refresh step** — closing a task without refreshing affected data files violates the SPEC.md "Always: build-as-documented" rule.
+Includes: 9 Zod schemas, 7 provider interfaces, Logger, QueryResult, three-layer config loader, kernel zone factories (`createIngest`, `createRetrieve`, `createMaintain`, `createQuery`, `createCommand`), and the `createArcana()` top-level factory. All kernel method bodies throw `NotImplementedError` — that's intentional; see strategy below.
 
-## Implementation order
+## Strategy change — demand-driven kernel implementation
 
+The earlier PLAN.md had T9 (testkit), T10 (libsql provider), T11 (ci.yml), T12 (publish) as the remaining v0.1.0 work. **All of those are now deferred** in favor of a demand-driven flow:
+
+- Arcana kernel methods get implemented **as KyberBot adoption work demands them**, not against a tidy zone-by-zone TODO.
+- The `NotImplementedError` thrown by each stub is the protocol message: "this method is needed, implement it next."
+- KyberBot adoption runs in a separate Claude Code session at `~/dev/kybernesis/kyberbot/` — it consumes Arcana via a local workspace dep, not from npm.
+- Kybernesis Brain adoption follows the same playbook but is handed off to Ian via a parallel doc.
+
+See `docs/adoption/kyberbot.md` for the adoption playbook and `docs/adoption/kybernesis-brain.md` for the handoff template.
+
+### Deferred items (revisit when demand justifies them)
+
+| ID | What | When to revisit |
+|---|---|---|
+| T9 | `arcana-testkit` (provider compliance harness) | When a second provider needs cross-implementation validation. Not before. |
+| T10 | `arcana-providers-libsql` (reference impl) | After KyberBot has lifted its libsql code into Arcana via adoption — at that point, the libsql provider is mostly already written. |
+| T11 | `.github/workflows/ci.yml` | When there's a remote and a PR flow. We're local-only right now. |
+| T12a | Manual npm publish | When Ian reserves `kybernesisai` org on npm AND consumers genuinely need cross-machine install (not just two David machines via syncthing). |
+| T12b | CI publish + idempotency | After T12a. |
+
+## v0.x — kernel implementations (active work)
+
+Methods get implemented in the order KyberBot adoption demands them. Each implementation:
+
+1. Lands as its own small commit in Arcana
+2. Replaces the corresponding stub
+3. Gets a real unit test in the relevant zone's `*.test.ts`
+4. Updates `.mochaccino/data/` to reflect what's now real vs still stubbed
+
+There is **no fixed order** beyond what KyberBot encounters first. The brain doc's algorithm specs in `~/dev/ad/brains/kybernesis/arcana-spec.md` §5-§10 are the canonical reference for *how* each method should behave; this PLAN doesn't restate them.
+
+## Cross-session communication
+
+Two Claude Code sessions run in parallel:
+
+| Session | Cwd | Role |
+|---|---|---|
+| Arcana session (this one) | `~/dev/kybernesis/arcana/` | Implements kernel methods on demand |
+| KyberBot session | `~/dev/kybernesis/kyberbot/` | Drives adoption; rips out `packages/cli/src/brain/*` module by module |
+
+The communication protocol is described in `docs/adoption/kyberbot.md` under "Cross-session protocol."
+
+## Local consumption (no npm)
+
+KyberBot references Arcana via `pnpm` `file:` deps:
+
+```json
+"dependencies": {
+  "@kybernesisai/arcana-contracts": "file:../../arcana/packages/arcana-contracts",
+  "@kybernesisai/arcana-config": "file:../../arcana/packages/arcana-config",
+  "@kybernesisai/arcana-core": "file:../../arcana/packages/arcana-core"
+}
 ```
-┌─ 1 Repo init
-│
-├─ 2 Workspace shell ──────────────┬─── 8 CI ci.yml
-│                                  │
-└─ 3 arcana-contracts ─┬──────────┬──────────┬───────────────┐
-                       │          │          │               │
-                       ▼          ▼          ▼               ▼
-                  4 config   5 core      (parallel)      (used by all)
-                              │
-                              ▼
-                         6 testkit
-                              │
-                              ▼
-                  7 providers-libsql
-                              │
-                              ▼
-                       9 publish.yml ──→ 10 first publish
-```
 
-### Sequential critical path
+Each Arcana rebuild + `pnpm install` in KyberBot refreshes the consumed code. Works across David's two machines via syncthing of the `~/dev/kybernesis/` directory.
 
-1 → 2 → 3 → 5 → 6 → 7 → 9 → 10
+## What hasn't changed
 
-### Parallelizable
-
-- **After 2**: CI scaffold (8), README polish, LICENSE — all can be done while contracts (3) is being authored
-- **After 3**: config (4) and core (5) can be written in parallel; both depend only on contracts
-- **After 5**: testkit (6) and a placeholder for providers-libsql (7) can start concurrently — testkit needs core's *interface types*, not its impl
-
-## Risks & mitigations
-
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| Bun + `tsc -b` composite project resolution issues | Med | High | Validate end-to-end with a minimal 2-package toy first; lock Bun version in `engines` |
-| Vitest 2.x + Bun runtime compatibility — Vitest runs on Node | Low | Med | Run Vitest via `bun x vitest` (Bun shells out to Node) — confirmed pattern in AppySentinel |
-| npm publish ordering — `core` consuming unpublished `contracts` version | Med | High | Use `workspace:^` protocol in dev; CI rewrites to fixed version at publish; publish in dependency order |
-| GitHub Actions OIDC + npm provenance setup friction | Low | Low | Skip provenance for v0.1; add as v0.2 hardening |
-| Logger interface shape too narrow for KyberBot or cloud needs | Low | High (locks contract) | Mirror KyberBot's existing logger surface (`debug/info/warn/error` + optional ctx object) — already inspected its `logger.ts` |
-| Zod 3 vs Zod 4 — Zod 4 is out; do we pin 3 or jump to 4? | Med | Low | Pin 3.x for v0.1 (stable, what cloud likely already uses); revisit in v0.2 |
-| Naming collision on `@kybernesisai/*` scope — does it exist on npm yet? | Resolved | — | Verified: scope not yet claimed on npm (404). David to register the `kybernesisai` org via `npm org create kybernesisai` (or npmjs.com web UI) before T12a. |
-| The "next day or two" timeline | High | Med | This plan is realistic for scaffold-grade in 1-2 focused days *if* repo/CI/npm-scope ops go smoothly. If they don't, day 2 slips to day 3. Not catastrophic. |
-
-## Verification checkpoints
-
-Each checkpoint is a stop-the-world gate before proceeding:
-
-- **After 2** — `bun install` on a fresh clone succeeds; `bun run typecheck` succeeds (no packages yet, just config validates)
-- **After 3** — `bun --filter @kybernesisai/arcana-contracts run build` produces `dist/`; importing `Memory`, `Logger`, `QueryResult` types from another package works; Zod schemas validate sample data correctly
-- **After 5** — `createArcana({stubs})` returns an object with `.ingest`, `.retrieve`, `.maintain`, `.providers`, `.logger`; calling a method returns a typed stub response (no real work)
-- **After 7** — `runComplianceSuite(libsqlProvider)` passes (suite may be 1 trivial test); `vitest run` is green across all packages
-- **After 8** — PR to a test branch triggers ci.yml; all checks green
-- **After 9** — `bun run version:bump 0.1.0` followed by `git push --follow-tags` triggers publish.yml; all 5 packages appear on npm; re-running the same workflow on the same tag is a no-op (idempotency proven)
-- **After 10** — `npm install @kybernesisai/arcana-core` from a scratch directory works; `import { createArcana } from '@kybernesisai/arcana-core'` resolves; published `dist/` matches local build
-
-## Authoring
-
-v0.x kernel implementations: **David Cruwys (AppyDave)** as primary author. Task sizing in Phase 3 reflects one human's focused sessions, not parallel multi-agent dispatch.
-
-## What this plan does NOT cover
-
-Explicitly out of scope for Phase 2:
-
-- v0.x kernel implementations (Jaccard math, RRF, sleep step bodies, etc.) — separate plan
-- KyberBot's adoption / rip-out — separate plan in the KyberBot repo
-- Kybernesis Brain adoption — separate plan
-- Hermes/MemoryOS synthesis research — separate research track
-- Provider implementations beyond libsql reference — v0.2+
-- Performance benchmarking — v0.2+
+- SPEC.md remains the canonical build contract
+- The architectural design source (`~/dev/ad/brains/kybernesis/arcana-spec.md`) remains authoritative
+- The portable-cortex pattern remains the architecture
+- The decisions locked in earlier (decay 2%/wk floor 0.30, RRF default, ARP scopes first-class, etc.) remain locked
+- The "build-as-documented" Mochaccino boundary rule remains in force
