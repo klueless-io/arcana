@@ -1,0 +1,54 @@
+{
+  "angle": "matrix",
+  "title": "Arcana Contracts Surface",
+  "subtitle": "Every Zod schema and provider interface that v0.1.0 must ship",
+  "purpose": "Tracks what's defined in @kybernesisai/arcana-contracts. Source of truth is arcana-spec.md §10 in the brain. Status flips to 'complete' when the Zod schema validates sample data round-trips in a test.",
+  "generated": "2026-05-18",
+  "system": "arcana",
+  "milestone": "v0.1.0",
+  "status_legend": [
+    { "id": "not_started", "symbol": "○", "label": "Not started" },
+    { "id": "drafted", "symbol": "◐", "label": "TS draft only" },
+    { "id": "complete", "symbol": "✓", "label": "Zod schema + round-trip test" }
+  ],
+  "sections": [
+    {
+      "id": "data_model",
+      "label": "Data model (Zod schemas)",
+      "source": "~/dev/ad/brains/kybernesis/arcana-spec.md §10",
+      "rows": [
+        { "name": "Memory", "status": "not_started" },
+        { "name": "Chunk", "status": "not_started" },
+        { "name": "Entity", "status": "not_started" },
+        { "name": "Edge", "status": "not_started" },
+        { "name": "Fact", "status": "not_started" },
+        { "name": "Contradiction", "status": "not_started" },
+        { "name": "Insight", "status": "not_started" },
+        { "name": "EntityProfile", "status": "not_started" },
+        { "name": "AgentSelf", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "provider_interfaces",
+      "label": "Provider interfaces (TS)",
+      "rows": [
+        { "name": "StructuredStore", "status": "not_started" },
+        { "name": "VectorStore", "status": "not_started" },
+        { "name": "EmbeddingProvider", "status": "not_started" },
+        { "name": "LLMProvider", "status": "not_started" },
+        { "name": "RerankerProvider", "status": "not_started" },
+        { "name": "Scheduler", "status": "not_started" },
+        { "name": "JobQueue", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "envelopes",
+      "label": "Envelopes & utilities",
+      "rows": [
+        { "name": "Logger", "status": "not_started" },
+        { "name": "QueryResult<T>", "status": "not_started" },
+        { "name": "Scopes (ARP)", "status": "not_started" }
+      ]
+    }
+  ]
+}

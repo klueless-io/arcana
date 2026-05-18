@@ -1,0 +1,56 @@
+{
+  "angle": "card-grid",
+  "title": "Arcana Package Graph",
+  "subtitle": "Five packages, their dependencies, and current build state",
+  "purpose": "Shows the v0.1.0 package layout and dependency direction. Useful for understanding what blocks what during the scaffold milestone.",
+  "generated": "2026-05-18",
+  "system": "arcana",
+  "milestone": "v0.1.0",
+  "status_legend": [
+    { "id": "not_started", "symbol": "○", "label": "Not started" },
+    { "id": "scaffolded", "symbol": "◐", "label": "Skeleton in place" },
+    { "id": "complete", "symbol": "✓", "label": "v0.1.0 complete" }
+  ],
+  "packages": [
+    {
+      "id": "arcana-contracts",
+      "npm_name": "@kybernesisai/arcana-contracts",
+      "role": "Base — Zod schemas, provider interfaces, Logger, QueryResult envelope, ARP scopes",
+      "depends_on": [],
+      "status": "not_started",
+      "tasks": ["T4", "T5"]
+    },
+    {
+      "id": "arcana-config",
+      "npm_name": "@kybernesisai/arcana-config",
+      "role": "Zod-validated config loader (defaults → file → env)",
+      "depends_on": ["arcana-contracts"],
+      "status": "not_started",
+      "tasks": ["T6"]
+    },
+    {
+      "id": "arcana-core",
+      "npm_name": "@kybernesisai/arcana-core",
+      "role": "Kernel — createArcana() factory + ingest/retrieve/maintain/access zones (stubbed in v0.1)",
+      "depends_on": ["arcana-contracts"],
+      "status": "not_started",
+      "tasks": ["T7", "T8"]
+    },
+    {
+      "id": "arcana-testkit",
+      "npm_name": "@kybernesisai/arcana-testkit",
+      "role": "Provider compliance harness — every provider runs the same suite",
+      "depends_on": ["arcana-contracts", "arcana-core"],
+      "status": "not_started",
+      "tasks": ["T9"]
+    },
+    {
+      "id": "arcana-providers-libsql",
+      "npm_name": "@kybernesisai/arcana-providers-libsql",
+      "role": "Reference StructuredStore impl — real libsql connect + one round-trip, other methods throw NotImplementedError",
+      "depends_on": ["arcana-contracts", "arcana-testkit"],
+      "status": "not_started",
+      "tasks": ["T10"]
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Bun
+bun.lockb
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Vitest
+.vitest-cache/
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Mochaccino generated views (data files are versioned; rendered HTML is not)
+.mochaccino/designs/
+.mochaccino/.cache/

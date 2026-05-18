@@ -1,0 +1,31 @@
+# Arcana
+
+The canonical knowledge-brain library for the Kybernesis product family.
+
+Arcana defines the shared memory substrate consumed by **KyberBot** (local agent runtime), **Kybernesis cloud** (multi-tenant memory SaaS), and future Kybernesis products. It implements the **portable-cortex pattern** — a `kernel` (data model + sleep pipeline + retrieval logic) wrapped by pluggable `providers` (embedding, LLM, vector store, structured store, scheduler, queue) and `interfaces` (CLI, MCP, HTTP, channels, ingestion).
+
+## Status
+
+**Pre-alpha — v0.1.0 in progress.** This is the scaffold milestone: packages publish, types/exports/CI wire up, but kernel methods are stubs. Real implementations land in v0.x. Consumer adoption (KyberBot, Kybernesis Brain) lands after that.
+
+## Documentation
+
+- [`SPEC.md`](./SPEC.md) — the build contract: tech stack, project structure, success criteria, boundaries
+- [`PLAN.md`](./PLAN.md) — implementation plan: components, dependency order, risks, checkpoints
+- [`.mochaccino/`](./.mochaccino/) — live build documentation (refreshed at each task close)
+
+The architectural design source lives outside this repo: `~/dev/ad/brains/kybernesis/arcana-spec.md`.
+
+## Packages (planned for v0.1.0)
+
+| Package | Purpose |
+|---|---|
+| `@kybernesisai/arcana-contracts` | Zod schemas, provider interfaces, `Logger`, `QueryResult<T>` |
+| `@kybernesisai/arcana-config` | Zod-validated config loader |
+| `@kybernesisai/arcana-core` | Kernel — `createArcana()` factory + ingest/retrieve/maintain/access zones |
+| `@kybernesisai/arcana-testkit` | Provider compliance harness |
+| `@kybernesisai/arcana-providers-libsql` | Reference `StructuredStore` implementation |
+
+## License
+
+[MIT](./LICENSE) © 2026 David Cruwys (AppyDave)

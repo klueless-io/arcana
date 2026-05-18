@@ -1,0 +1,54 @@
+{
+  "angle": "kanban",
+  "title": "Arcana v0.1.0 Build Progress",
+  "subtitle": "Task lifecycle across the scaffold milestone",
+  "purpose": "Live view of where v0.1.0 stands. Each task moves todo → in-progress → done. Updated after every Tn closes.",
+  "generated": "2026-05-18",
+  "system": "arcana",
+  "milestone": "v0.1.0",
+  "status_legend": [
+    { "id": "todo", "symbol": "○", "label": "Not started" },
+    { "id": "in_progress", "symbol": "◐", "label": "In progress" },
+    { "id": "done", "symbol": "✓", "label": "Complete" },
+    { "id": "blocked", "symbol": "⊗", "label": "Blocked" }
+  ],
+  "columns": [
+    {
+      "id": "done",
+      "label": "Done",
+      "tasks": [
+        { "id": "T0", "title": "Mochaccino workspace", "closed": "2026-05-18", "files": [".mochaccino/workspace.md", ".mochaccino/data/01-05"] },
+        { "id": "T1", "title": "Repo bootstrap (local)", "closed": "2026-05-18", "files": [".gitignore", "LICENSE", "README.md"], "note": "Local-only; GitHub remote deferred pending KybernesisAI org access confirmation." }
+      ]
+    },
+    {
+      "id": "in_progress",
+      "label": "In Progress",
+      "tasks": []
+    },
+    {
+      "id": "blocked",
+      "label": "Blocked / Awaiting",
+      "tasks": [
+        { "id": "T2", "title": "npm scope reservation", "owner": "Ian (or transferable from David)", "note": "Register kybernesisai org on npm before T10a." }
+      ]
+    },
+    {
+      "id": "todo",
+      "label": "Todo",
+      "tasks": [
+        { "id": "T3", "title": "Workspace shell", "depends_on": ["T1"] },
+        { "id": "T4", "title": "arcana-contracts: data model schemas", "depends_on": ["T3"] },
+        { "id": "T5", "title": "arcana-contracts: interfaces & envelopes", "depends_on": ["T4"] },
+        { "id": "T6", "title": "arcana-config", "depends_on": ["T5"] },
+        { "id": "T7", "title": "arcana-core: skeleton + zones", "depends_on": ["T5"] },
+        { "id": "T8", "title": "arcana-core: createArcana() factory", "depends_on": ["T7"] },
+        { "id": "T9", "title": "arcana-testkit", "depends_on": ["T8"] },
+        { "id": "T10", "title": "arcana-providers-libsql", "depends_on": ["T9"] },
+        { "id": "T11", "title": "CI: ci.yml", "depends_on": ["T3"] },
+        { "id": "T12a", "title": "First publish (manual)", "depends_on": ["T10", "T2"] },
+        { "id": "T12b", "title": "CI: publish.yml + idempotency proof on v0.1.1", "depends_on": ["T12a"] }
+      ]
+    }
+  ]
+}

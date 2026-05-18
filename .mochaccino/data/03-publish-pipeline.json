@@ -1,0 +1,40 @@
+{
+  "angle": "data-flow",
+  "title": "Arcana Publish Pipeline",
+  "subtitle": "From commit to npm — v0.1.0 first publish is hand-rolled; v0.1.1 onward is CI-driven",
+  "purpose": "Shows the publish path for v0.1.x. The v0.1.0 manual pass surfaces auth/scope/exports gotchas with immediate feedback. v0.1.1 onward proves idempotency via publish.yml.",
+  "generated": "2026-05-18",
+  "system": "arcana",
+  "milestone": "v0.1.0",
+  "status_legend": [
+    { "id": "not_started", "symbol": "○", "label": "Not started" },
+    { "id": "wired", "symbol": "◐", "label": "Workflow exists, not run" },
+    { "id": "green", "symbol": "✓", "label": "Run green" }
+  ],
+  "lanes": [
+    {
+      "id": "v0_1_0_manual",
+      "label": "v0.1.0 — Manual first publish",
+      "stages": [
+        { "id": "lint", "label": "bun run lint", "status": "not_started" },
+        { "id": "typecheck", "label": "bun run typecheck", "status": "not_started" },
+        { "id": "test", "label": "bun run test", "status": "not_started" },
+        { "id": "publish_contracts", "label": "npm publish @kybernesisai/arcana-contracts", "status": "not_started" },
+        { "id": "publish_config", "label": "npm publish @kybernesisai/arcana-config", "status": "not_started" },
+        { "id": "publish_core", "label": "npm publish @kybernesisai/arcana-core", "status": "not_started" },
+        { "id": "publish_testkit", "label": "npm publish @kybernesisai/arcana-testkit", "status": "not_started" },
+        { "id": "publish_libsql", "label": "npm publish @kybernesisai/arcana-providers-libsql", "status": "not_started" },
+        { "id": "tag", "label": "git tag v0.1.0 && git push --tags", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "v0_1_1_ci",
+      "label": "v0.1.1 — CI-driven (publish.yml)",
+      "stages": [
+        { "id": "ci_lint_typecheck_test", "label": "ci.yml passes on tag", "status": "not_started" },
+        { "id": "ci_publish_loop", "label": "publish.yml: for each pkg in dep order, npm view → skip or publish", "status": "not_started" },
+        { "id": "ci_idempotency", "label": "Re-run on same tag is no-op", "status": "not_started" }
+      ]
+    }
+  ]
+}
