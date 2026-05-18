@@ -53,6 +53,9 @@
   "dependencies": {
     "@kybernesisai/arcana-contracts": "workspace:*"
   },
+  "devDependencies": {
+    "@kybernesisai/arcana-testkit": "workspace:*"
+  },
   "publishConfig": {
     "access": "public"
   }

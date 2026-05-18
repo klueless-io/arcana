@@ -51,9 +51,9 @@
     {
       "id": "arcana-testkit",
       "npm_name": "@kybernesisai/arcana-testkit",
-      "role": "Provider compliance harness — every provider runs the same suite",
-      "depends_on": ["arcana-contracts", "arcana-core"],
-      "status": "not_started",
+      "role": "In-memory fake providers for consumer integration tests (compliance harness deferred)",
+      "depends_on": ["@kybernesisai/arcana-contracts (workspace)"],
+      "status": "scaffolded",
       "tasks": ["T9"]
     },
     {

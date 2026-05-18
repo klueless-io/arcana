@@ -45,10 +45,18 @@
       "tasks": []
     },
     {
+      "id": "v0_x_in_progress",
+      "label": "v0.x — demand-driven implementations",
+      "tasks": [
+        { "id": "v0x.001", "title": "arcana-testkit revival (smaller scope)", "closed": "2026-05-18", "note": "T9 was deferred, but demand from KyberBot module #1 brought it back — exactly the demand-driven flow. Smaller scope: just the 4 fake providers (StructuredStore, VectorStore, EmbeddingProvider, LLMProvider), no compliance suite yet." },
+        { "id": "v0x.002", "title": "arcana-core/ingest.storeMemory implementation", "closed": "2026-05-18", "note": "First real kernel method implementation. Scope-locked to the canonical row write (build Memory with defaults, validate via MemorySchema, persist via StructuredStore, return id). Deliberately excluded: chunking, embedding, fact extraction, edge creation — those land when retrieval demands them. djb2 contentHash + crypto.randomUUID id. Caller from KyberBot's timeline.ts mirror path." }
+      ]
+    },
+    {
       "id": "deferred",
       "label": "Deferred (post-scaffold; demand-driven)",
       "tasks": [
-        { "id": "T9", "title": "arcana-testkit", "deferred_to": "v0.1.x", "reason": "Adoption doesn't need cross-provider compliance harness yet — only one provider will exist (lifted from KyberBot's libsql code during adoption)." },
+        { "id": "T9", "title": "arcana-testkit compliance suite", "deferred_to": "when a second real provider exists", "reason": "The 4 fake providers landed (v0.x.001). The original compliance harness — runComplianceSuite(provider) cross-checking implementations — stays deferred until libsql is joined by Convex or Chroma." },
         { "id": "T10", "title": "arcana-providers-libsql", "deferred_to": "v0.1.x", "reason": "Real libsql provider emerges from KyberBot adoption — KyberBot's existing libsql code is the source. Don't author fresh." },
         { "id": "T11", "title": "CI: ci.yml", "deferred_to": "when remote exists", "reason": "Local-only repo, no PR flow yet." },
         { "id": "T12a", "title": "First publish (manual)", "deferred_to": "after KyberBot adoption validates contracts", "reason": "Local file: deps work for current consumption pattern. Publish once contracts have been stress-tested by a real consumer." },

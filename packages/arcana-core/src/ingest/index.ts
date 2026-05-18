@@ -1,13 +1,16 @@
-import type {
-  Memory,
-  Scopes,
-  StructuredStore,
-  VectorStore,
-  EmbeddingProvider,
-  LLMProvider,
-  Logger,
+import { randomUUID } from 'node:crypto';
+import {
+  MemorySchema,
+  type Memory,
+  type Scopes,
+  type StructuredStore,
+  type VectorStore,
+  type EmbeddingProvider,
+  type LLMProvider,
+  type Logger,
 } from '@kybernesisai/arcana-contracts';
 import { NotImplementedError } from '../errors.js';
+import { djb2Hash } from '../util/hash.js';
 
 export interface StoreMemoryInput {
   content: string;
@@ -34,22 +37,55 @@ export interface IngestDeps {
 }
 
 export interface IngestApi {
-  /** Persist a memory and trigger downstream extraction. Returns the new memory id. */
+  /** Persist a memory and return its assigned id. */
   storeMemory(input: StoreMemoryInput): Promise<string>;
   /** Convert + chunk + ingest a document. Returns the new memory id. */
   ingestDocument(input: IngestDocumentInput): Promise<string>;
 }
 
-export function createIngest(_deps: IngestDeps): IngestApi {
+/**
+ * v0.x implementation of `storeMemory`. Scope-locked to the canonical row
+ * write: build a complete Memory with defaults, validate, persist via the
+ * StructuredStore, return the id.
+ *
+ * Deliberately NOT included at this milestone (will land when retrieval
+ * actually needs them):
+ * - chunking + embedding (depends on EmbeddingProvider + VectorStore)
+ * - fact extraction (depends on LLMProvider)
+ * - contradiction detection
+ * - eager edge creation
+ *
+ * Those land when KyberBot's retrieval/fact code paths demand them.
+ * For dual-write today (timeline.ts mirror), the canonical row write is
+ * sufficient.
+ */
+export function createIngest(deps: IngestDeps): IngestApi {
   return {
-    storeMemory: async () => {
-      throw new NotImplementedError(
-        'arcana-core/ingest.storeMemory is a v0.1 scaffold stub; real implementation lands in v0.x',
-      );
+    storeMemory: async (input: StoreMemoryInput): Promise<string> => {
+      const memory: Memory = MemorySchema.parse({
+        id: randomUUID(),
+        title: input.title ?? '',
+        summary: input.summary ?? '',
+        content: input.content,
+        tags: input.tags ?? [],
+        priority: 0.5,
+        tier: 'warm',
+        decayScore: 0,
+        accessCount: 0,
+        isPinned: false,
+        contentHash: djb2Hash(input.content),
+        source: input.source,
+        scopes: input.scopes,
+      });
+
+      await deps.structured.storeMemory(memory);
+      deps.logger.debug('arcana.ingest.storeMemory', { id: memory.id });
+      return memory.id;
     },
+
     ingestDocument: async () => {
       throw new NotImplementedError(
-        'arcana-core/ingest.ingestDocument is a v0.1 scaffold stub; real implementation lands in v0.x',
+        'arcana-core/ingest.ingestDocument is still a stub; lands when document ingestion is demanded by a consumer',
       );
     },
   };

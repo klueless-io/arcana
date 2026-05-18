@@ -33,6 +33,9 @@
       "dependencies": {
         "@kybernesisai/arcana-contracts": "workspace:*",
       },
+      "devDependencies": {
+        "@kybernesisai/arcana-testkit": "workspace:*",
+      },
     },
     "packages/arcana-testkit": {
       "name": "@kybernesisai/arcana-testkit",

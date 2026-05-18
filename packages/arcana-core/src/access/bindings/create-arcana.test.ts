@@ -87,11 +87,10 @@ describe('createArcana', () => {
     expect(arcana.logger).toBeDefined();
   });
 
-  it('zone methods throw NotImplementedError (v0.1 scaffold)', async () => {
+  it('still-stubbed zone methods throw NotImplementedError', async () => {
+    // storeMemory has been implemented (v0.x); other zones remain stubs.
+    // See packages/arcana-core/src/ingest/index.test.ts for storeMemory tests.
     const arcana = createArcana(makeFakes());
-    await expect(
-      arcana.ingest.storeMemory({ content: 'x', source: 'terminal' }),
-    ).rejects.toBeInstanceOf(NotImplementedError);
     await expect(
       arcana.retrieve.hybridSearch({ query: 'x' }),
     ).rejects.toBeInstanceOf(NotImplementedError);
@@ -101,9 +100,23 @@ describe('createArcana', () => {
     await expect(arcana.query.queryFacts('e')).rejects.toBeInstanceOf(
       NotImplementedError,
     );
+    await expect(arcana.command.pin('m1')).rejects.toBeInstanceOf(
+      NotImplementedError,
+    );
     await expect(
-      arcana.command.pin('m1'),
+      arcana.ingest.ingestDocument({ format: 'markdown', content: '# x' }),
     ).rejects.toBeInstanceOf(NotImplementedError);
+  });
+
+  it('ingest.storeMemory is now wired end-to-end through the kernel', async () => {
+    const fakes = makeFakes();
+    const arcana = createArcana(fakes);
+    const id = await arcana.ingest.storeMemory({
+      content: 'wired through createArcana',
+      source: 'cli',
+    });
+    expect(typeof id).toBe('string');
+    expect(id.length).toBeGreaterThan(0);
   });
 
   it('freezes the providers object (mutation throws in strict mode)', () => {
