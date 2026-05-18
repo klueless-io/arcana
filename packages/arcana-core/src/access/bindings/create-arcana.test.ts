@@ -98,9 +98,7 @@ describe('createArcana', () => {
     await expect(arcana.maintain.runSleepPipeline()).rejects.toBeInstanceOf(
       NotImplementedError,
     );
-    await expect(arcana.query.queryFacts('e')).rejects.toBeInstanceOf(
-      NotImplementedError,
-    );
+    // Note: query.queryFacts is now implemented — see access/query/index.test.ts
     await expect(arcana.command.pin('m1')).rejects.toBeInstanceOf(
       NotImplementedError,
     );

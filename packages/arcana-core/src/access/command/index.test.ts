@@ -135,19 +135,76 @@ describe('command.linkNodes', () => {
   });
 });
 
-describe('still-stubbed command methods', () => {
-  it('recordFact throws NotImplementedError', async () => {
-    await expect(
-      api.recordFact({
-        entity: 'David',
-        attribute: 'role',
-        value: 'engineer',
-        confidence: 0.9,
-        sourceType: 'chat',
-      }),
-    ).rejects.toThrow(NotImplementedError);
+describe('command.recordFact', () => {
+  it('persists a sentence-only fact (no triple decomposition)', async () => {
+    const id = await api.recordFact({
+      fact: 'David likes coffee',
+      entity: 'David',
+      confidence: 0.8,
+      sourceType: 'chat',
+    });
+    expect(id).toMatch(/^[0-9a-f-]{36}$/);
+    const stored = await structured.getFactsForEntity('David');
+    expect(stored).toHaveLength(1);
+    expect(stored[0]?.fact).toBe('David likes coffee');
+    expect(stored[0]?.attribute).toBeUndefined();
+    expect(stored[0]?.value).toBeUndefined();
+    expect(stored[0]?.isLatest).toBe(true);
   });
 
+  it('persists a fully-decomposed fact (with attribute + value)', async () => {
+    const id = await api.recordFact({
+      fact: 'David is a senior engineer',
+      entity: 'David',
+      attribute: 'role',
+      value: 'senior engineer',
+      confidence: 0.95,
+      sourceType: 'ai-extraction',
+    });
+    const stored = await structured.getFactsForEntity('David', 'role');
+    expect(stored).toHaveLength(1);
+    expect(stored[0]?.id).toBe(id);
+    expect(stored[0]?.attribute).toBe('role');
+    expect(stored[0]?.value).toBe('senior engineer');
+  });
+
+  it('passes through optional scopes', async () => {
+    const id = await api.recordFact({
+      fact: 'Acme is in San Francisco',
+      entity: 'Acme',
+      confidence: 0.9,
+      sourceType: 'connector',
+      scopes: { project_id: 'proj_1' },
+    });
+    const stored = (await structured.getFactsForEntity('Acme'))[0];
+    expect(stored?.id).toBe(id);
+    expect(stored?.scopes?.project_id).toBe('proj_1');
+  });
+
+  it('rejects invalid confidence (out of range)', async () => {
+    await expect(
+      api.recordFact({
+        fact: 'x',
+        entity: 'David',
+        confidence: 1.5,
+        sourceType: 'chat',
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('rejects empty fact (required field)', async () => {
+    await expect(
+      api.recordFact({
+        fact: '',
+        entity: 'David',
+        confidence: 0.5,
+        sourceType: 'chat',
+      }),
+    ).rejects.toThrow();
+  });
+});
+
+describe('still-stubbed command methods', () => {
   it('correctFact throws NotImplementedError', async () => {
     await expect(api.correctFact('fact_1', 'new')).rejects.toThrow(
       NotImplementedError,

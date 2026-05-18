@@ -1,9 +1,11 @@
 # ADR 003 — Facts as memories vs facts as triples
 
-**Status**: Accepted
+**Status**: **Superseded by [ADR 004](./004-fact-schema-optional-triple-decomposition.md)** (2026-05-18, ~30 minutes after this ADR landed)
 **Date**: 2026-05-18
 **Decider**: David Cruwys (AppyDave)
 **Discovered by**: KyberBot adoption session (module #4 audit)
+
+> **Why superseded**: This ADR concluded that KyberBot's sentence-shaped facts should mirror to Arcana's Memory store (via `ingest.storeMemory`) because they didn't fit Arcana's required-triple `FactSchema`. David's follow-up challenge — *"what does Arcana's Fact triple semantic solve?"* — prompted an audit of both consumers' actual fact-extraction code. The audit revealed that **neither consumer produces required triples** and that **the original `FactSchema` was over-specified**, not that KyberBot's facts were Memory-shaped. The corrected schema (`fact: string` required, `attribute`/`value` optional) fits both consumers. KyberBot's facts ARE Facts; they just lack the optional triple decomposition. See ADR 004 for the corrected analysis.
 
 ## Context
 

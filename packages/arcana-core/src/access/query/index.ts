@@ -41,7 +41,16 @@ export interface QueryApi {
   getBlockHistory(label: string): Promise<QueryResult<AgentSelf['history']>>;
 }
 
-export function createQuery(_deps: QueryDeps): QueryApi {
+function freshEnvelope<T>(data: T): QueryResult<T> {
+  return {
+    data,
+    generated_at: new Date().toISOString(),
+    data_age_ms: 0,
+    stale: false,
+  };
+}
+
+export function createQuery(deps: QueryDeps): QueryApi {
   const stub = (method: string): never => {
     throw new NotImplementedError(
       `arcana-core/access.query.${method} is a v0.1 scaffold stub; real implementation lands in v0.x`,
@@ -49,7 +58,19 @@ export function createQuery(_deps: QueryDeps): QueryApi {
   };
 
   return {
-    queryFacts: async () => stub('queryFacts'),
+    queryFacts: async (
+      entity: string,
+      attribute?: string,
+    ): Promise<QueryResult<Fact[]>> => {
+      const facts = await deps.structured.getFactsForEntity(entity, attribute);
+      deps.logger.debug('arcana.query.queryFacts', {
+        entity,
+        attribute,
+        count: facts.length,
+      });
+      return freshEnvelope(facts);
+    },
+
     getNeighbors: async () => stub('getNeighbors'),
     stats: async () => stub('stats'),
     listContradictions: async () => stub('listContradictions'),

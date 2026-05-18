@@ -21,7 +21,7 @@
         { "name": "Chunk", "status": "complete", "test_file": "memory.test.ts" },
         { "name": "Entity", "status": "complete", "test_file": "entity.test.ts" },
         { "name": "Edge", "status": "complete", "test_file": "edge.test.ts" },
-        { "name": "Fact", "status": "complete", "test_file": "fact.test.ts" },
+        { "name": "Fact", "status": "complete", "test_file": "fact.test.ts", "evolution": ["v0.1 initial: required (entity, attribute, value) triple", "v0.x: ADR 004 — fact (sentence) required; attribute/value optional. Fits both real-world fact extractors (KyberBot sentences, Kybernesis Brain sentences-with-optional-decomposition)."] },
         { "name": "Contradiction", "status": "complete", "test_file": "fact.test.ts" },
         { "name": "Insight", "status": "complete", "test_file": "insight.test.ts" },
         { "name": "EntityProfile", "status": "complete", "test_file": "insight.test.ts" },

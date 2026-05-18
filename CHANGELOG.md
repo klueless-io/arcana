@@ -42,6 +42,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Adoption playbook (`docs/adoption/kyberbot.md`) row 4 was wrong: KyberBot's fact-store doesn't demand `command.recordFact`. KyberBot's facts are sentence-shaped (free text + entity list), not structured triples. They mirror via `ingest.storeMemory`. Triples are a future consumer (likely Kybernesis Brain). See ADR 003.
 - Row 5 (`fact-extractor.ts`) clarified: same sentence mirror unless KyberBot's extractor evolves to produce triples (a separate, deliberate decision).
 
+### Contract correction (supersedes the docs correction above)
+- **`FactSchema` updated**: `fact` (sentence form) is now a required field; `attribute` and `value` (triple decomposition) are now optional. The original required-triple shape didn't fit either real consumer (audited code).
+- ADR 003 marked **Superseded by ADR 004**.
+- Playbook row 4 reverted to `command.recordFact` (KyberBot's facts ARE Facts under the corrected schema; they just lack the optional decomposition).
+- `command.recordFact` and `query.queryFacts` move from stubbed to implemented:
+  - `recordFact` validates via the corrected FactSchema, builds the Fact with UUID id + ISO timestamp + `isLatest=true`, persists via the StructuredStore, returns the new id
+  - `queryFacts` reads via `structured.getFactsForEntity`, wraps in a fresh `QueryResult` envelope
+
 ## v0.1.0 — TBD
 
 Will be assigned when:

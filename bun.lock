@@ -35,6 +35,7 @@
       },
       "devDependencies": {
         "@kybernesisai/arcana-testkit": "workspace:*",
+        "@types/node": "^20.11.0",
       },
     },
     "packages/arcana-testkit": {

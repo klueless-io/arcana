@@ -188,8 +188,8 @@ KyberBot brain modules are roughly listed in dependency order. Lower-numbered it
 | 1 | `timeline.ts` | `ingest.storeMemory` (read methods stay local) |
 | 2 | `entity-graph.ts` | `command.upsertEntity`, `command.deleteEntity`, `command.linkNodes` |
 | 3 | `embeddings.ts` | provider wiring: `EmbeddingProvider` + `VectorStore` adapters around OpenAI + ChromaDB |
-| 4 | `fact-store.ts` | `ingest.storeMemory` (KyberBot facts are sentence-shaped memories, not triples — see ADR 003. `command.recordFact` stays a stub.) |
-| 5 | `fact-extractor.ts` | `ingest.storeMemory` flow (sentence-shaped). If/when evolved to produce structured triples → `command.recordFact` gets demanded; until then, sentence mirror via storeMemory. |
+| 4 | `fact-store.ts` | `command.recordFact` + `query.queryFacts` (the corrected FactSchema accepts sentence-form facts with optional triple decomposition — see ADR 004 which supersedes ADR 003). Local table stores `arcana_fact_id` (singular) per row. |
+| 5 | `fact-extractor.ts` | `command.recordFact` flow — populate `fact` (sentence) + `entity` (first/primary mentioned entity). If KyberBot's extractor evolves to also produce `(attribute, value)` decomposition, those fields become populated automatically. |
 | 6 | `fact-contradiction.ts` | sleep step + contradiction storage |
 | 7 | `fact-temporal.ts` | temporal expiry logic in fact storage |
 | 8 | `fact-retrieval.ts` | `retrieve.factRetrieval` (multi-stage) |
