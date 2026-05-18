@@ -12,25 +12,37 @@ Read this top-to-bottom before starting adoption work. The flow only works if bo
 
 ## 0. One-time setup (KyberBot side)
 
-Add Arcana packages as local `file:` deps in `kyberbot/packages/cli/package.json`:
+### Branch, not worktree
 
-```json
-"dependencies": {
-  "@kybernesisai/arcana-contracts": "file:../../../arcana/packages/arcana-contracts",
-  "@kybernesisai/arcana-config":    "file:../../../arcana/packages/arcana-config",
-  "@kybernesisai/arcana-core":      "file:../../../arcana/packages/arcana-core"
-}
+**Don't do this work in a git worktree.** `file:` deps resolve relative to the package.json's location; a worktree puts package.json several directories deeper than its eventual home, breaking the relative path. Also: this branch will accumulate `file:` deps that only work on David's machines (where `~/dev/kybernesis/` layout is consistent via syncthing). Keep it isolated from `main`.
+
+```bash
+cd ~/dev/kybernesis/kyberbot
+git checkout main
+git checkout -b arcana-adoption
 ```
 
-(Adjust relative path based on actual repo layout — `kyberbot/` and `arcana/` are siblings under `~/dev/kybernesis/`, so `../../../arcana/...` is correct from `packages/cli/`.)
+The `arcana-adoption` branch is **long-running**. It probably never merges to main until Arcana publishes to npm and the `file:` deps get swapped for version pins.
 
-Then in the kyberbot repo root:
+### Add the local deps
+
+Edit `packages/cli/package.json` and add to `dependencies`:
+
+```json
+"@kybernesisai/arcana-contracts": "file:../../../arcana/packages/arcana-contracts",
+"@kybernesisai/arcana-config":    "file:../../../arcana/packages/arcana-config",
+"@kybernesisai/arcana-core":      "file:../../../arcana/packages/arcana-core"
+```
+
+(`kyberbot/` and `arcana/` are siblings under `~/dev/kybernesis/`, so `../../../arcana/...` is correct from `packages/cli/`.)
+
+Then from the kyberbot repo root:
 
 ```bash
 pnpm install
 ```
 
-Verify:
+### Verify
 
 ```bash
 pnpm --filter @kyberbot/cli exec node -e "
@@ -41,6 +53,31 @@ pnpm --filter @kyberbot/cli exec node -e "
 ```
 
 When Arcana's source changes, refresh in KyberBot with `pnpm install` (pnpm re-links the file: dep).
+
+### Known risk — workspace:* resolution
+
+`arcana-core/package.json` declares `"@kybernesisai/arcana-contracts": "workspace:*"`. That's a Bun-workspace protocol. When pnpm installs arcana-core via `file:`, it may fail to resolve `workspace:*` because KyberBot isn't part of Arcana's workspace.
+
+**If pnpm install errors on that spec**: don't try to fix it yourself. Write a `NEEDS` entry in the comms file (`~/dev/kybernesis/.comms/arcana-kyberbot.md`) with the exact error. The Arcana session will either add a pnpm `overrides` block or rewrite Arcana's dep spec to use a version range. Fast turnaround.
+
+## 0a. Arcana singleton — consumer-side design
+
+**Arcana doesn't dictate how you create or hold the instance.** It just provides `createArcana(opts)` which is synchronous and returns the assembled object.
+
+Suggested KyberBot-side pattern:
+
+- `packages/cli/src/brain/arcana-singleton.ts` exports `getArcanaInstance()` and `initArcana()` / `disposeArcana()`
+- The orchestrator calls `initArcana()` once at boot, after `identity.yaml` is loaded
+- `initArcana()` reads identity.yaml, constructs concrete providers (libsql StructuredStore, ChromaDB VectorStore, OpenAI EmbeddingProvider, etc.), calls each provider's `.connect()`, then calls `createArcana({...providers})`
+- `disposeArcana()` calls each provider's `.disconnect()` on shutdown
+
+The provider interfaces declare `connect(): Promise<void>` and `disconnect(): Promise<void>` — your singleton lifecycle wraps these.
+
+**Config sourcing** is also your call:
+- Option A: Use `@kybernesisai/arcana-config`'s `loadConfig({env, filePath})` and map identity.yaml fields into Arcana's config shape
+- Option B: Skip arcana-config entirely; hand-roll `ArcanaOptions` from identity.yaml directly
+
+Either pattern is fine. Arcana has no opinion.
 
 ---
 
@@ -168,27 +205,52 @@ Items 13-15 may end up not migrating — they're interface-layer concerns (per S
 
 ---
 
-## 4. Cross-session protocol
+## 4. Cross-session protocol — comms file
 
-When KyberBot session hits a stub or contract issue, the message back to Arcana session should include:
-
-```
-NEEDS: arcana-core/<zone>.<method>
-CALLED FROM: kyberbot/packages/cli/src/brain/<file>.ts:<line>
-SHAPE: <expected input/output, briefly>
-SPEC REF: ~/dev/ad/brains/kybernesis/arcana-spec.md §<section>
-```
-
-The Arcana session responds when implementation is committed:
+Both sessions communicate via an append-only log at:
 
 ```
-IMPLEMENTED: arcana-core/<zone>.<method>
-COMMIT: <hash>
-TEST COUNT: <before> → <after>
-NOTES: <anything subtle about the impl that KyberBot caller should know>
+~/dev/kybernesis/.comms/arcana-kyberbot.md
 ```
 
-This isn't ceremony — it's keeping both contexts coherent without one session re-reading the other's full history.
+Either session can write an entry. When you switch sessions, the user says "**check comms**" and that session reads the latest entries from the bottom of the file.
+
+Entry format (most recent at bottom):
+
+```
+## YYYY-MM-DD HH:MM  SENDER → RECIPIENT  TYPE
+<body>
+```
+
+Senders: `KBOT`, `ARCANA`.
+Types: `NEEDS`, `IMPLEMENTED`, `QUESTION`, `ANSWER`, `NOTE`, `BLOCKED`.
+
+### When KyberBot hits a stub (NEEDS)
+
+```
+## 2026-05-18 12:34  KBOT → ARCANA  NEEDS
+arcana-core/ingest.storeMemory
+called from: kyberbot/packages/cli/src/brain/timeline.ts:42
+shape: input={content, source, ...}; returns memoryId string
+spec ref: ~/dev/ad/brains/kybernesis/arcana-spec.md §5.1
+```
+
+### When Arcana session has finished implementing (IMPLEMENTED)
+
+```
+## 2026-05-18 12:48  ARCANA → KBOT  IMPLEMENTED
+arcana-core/ingest.storeMemory
+commit: abc1234
+test count: 86 → 89
+notes: validates input with MemorySchema before persistence; assigns id via crypto.randomUUID
+```
+
+### Why this beats copy-pasting blocks
+
+- One source of truth instead of scrolling two transcripts
+- Survives session closure — reopening either session, read comms, you're back in sync
+- The user (David) only has to say "check comms" instead of ferrying blocks
+- Append-only log doubles as a record of the migration history
 
 ---
 
