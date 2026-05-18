@@ -4,3 +4,4 @@ export * as retrieve from './retrieve/index.js';
 export * as maintain from './maintain/index.js';
 export * as accessQuery from './access/query/index.js';
 export * as accessCommand from './access/command/index.js';
+export * from './access/bindings/index.js';

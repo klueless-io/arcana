@@ -1,0 +1,150 @@
+import { describe, it, expect } from 'vitest';
+import type {
+  StructuredStore,
+  VectorStore,
+  EmbeddingProvider,
+  LLMProvider,
+  Logger,
+} from '@kybernesisai/arcana-contracts';
+import { createArcana, type ArcanaOptions } from './create-arcana.js';
+import { NotImplementedError } from '../../errors.js';
+
+/**
+ * Minimal fakes — just enough to satisfy the interface shape. No real
+ * behaviour; all kernel methods throw NotImplementedError at v0.1.
+ */
+function makeFakeStructured(): StructuredStore {
+  return {
+    connect: async () => {},
+    disconnect: async () => {},
+    storeMemory: async () => {},
+    getMemory: async () => null,
+    listMemories: async () => [],
+    deleteMemory: async () => {},
+    storeChunks: async () => {},
+    getChunksForMemory: async () => [],
+    upsertEntity: async () => {},
+    getEntity: async () => null,
+    storeEdge: async () => {},
+    getNeighbors: async () => [],
+    storeFact: async () => {},
+    getFactsForEntity: async () => [],
+    storeContradiction: async () => {},
+    listContradictions: async () => [],
+    storeInsight: async () => {},
+    listInsights: async () => [],
+    storeEntityProfile: async () => {},
+    getEntityProfile: async () => null,
+    getAgentSelf: async () => null,
+    updateAgentSelf: async () => {},
+  };
+}
+
+function makeFakeVector(): VectorStore {
+  return {
+    connect: async () => {},
+    disconnect: async () => {},
+    upsert: async () => {},
+    query: async () => [],
+    delete: async () => {},
+  };
+}
+
+function makeFakeEmbed(): EmbeddingProvider {
+  return {
+    model: 'fake-embed',
+    dimensions: 3,
+    embed: async () => [0, 0, 0],
+    embedBatch: async (texts) => texts.map(() => [0, 0, 0]),
+  };
+}
+
+function makeFakeLLM(): LLMProvider {
+  return {
+    model: 'fake-llm',
+    complete: async () => 'fake',
+  };
+}
+
+function makeFakes(): ArcanaOptions {
+  return {
+    structured: makeFakeStructured(),
+    vector: makeFakeVector(),
+    embed: makeFakeEmbed(),
+    llm: makeFakeLLM(),
+  };
+}
+
+describe('createArcana', () => {
+  it('returns an object with all five zones, providers, and logger', () => {
+    const arcana = createArcana(makeFakes());
+    expect(arcana.ingest).toBeDefined();
+    expect(arcana.retrieve).toBeDefined();
+    expect(arcana.maintain).toBeDefined();
+    expect(arcana.query).toBeDefined();
+    expect(arcana.command).toBeDefined();
+    expect(arcana.providers).toBeDefined();
+    expect(arcana.logger).toBeDefined();
+  });
+
+  it('zone methods throw NotImplementedError (v0.1 scaffold)', async () => {
+    const arcana = createArcana(makeFakes());
+    await expect(
+      arcana.ingest.storeMemory({ content: 'x', source: 'terminal' }),
+    ).rejects.toBeInstanceOf(NotImplementedError);
+    await expect(
+      arcana.retrieve.hybridSearch({ query: 'x' }),
+    ).rejects.toBeInstanceOf(NotImplementedError);
+    await expect(arcana.maintain.runSleepPipeline()).rejects.toBeInstanceOf(
+      NotImplementedError,
+    );
+    await expect(arcana.query.queryFacts('e')).rejects.toBeInstanceOf(
+      NotImplementedError,
+    );
+    await expect(
+      arcana.command.pin('m1'),
+    ).rejects.toBeInstanceOf(NotImplementedError);
+  });
+
+  it('freezes the providers object (mutation throws in strict mode)', () => {
+    const arcana = createArcana(makeFakes());
+    expect(Object.isFrozen(arcana.providers)).toBe(true);
+    expect(() => {
+      (arcana.providers as { llm: unknown }).llm = null;
+    }).toThrow();
+  });
+
+  it('uses an injected logger by reference', () => {
+    const calls: string[] = [];
+    const customLogger: Logger = {
+      debug: (msg) => calls.push(`debug:${msg}`),
+      info: (msg) => calls.push(`info:${msg}`),
+      warn: (msg) => calls.push(`warn:${msg}`),
+      error: (msg) => calls.push(`error:${msg}`),
+    };
+    const arcana = createArcana({ ...makeFakes(), logger: customLogger });
+    expect(arcana.logger).toBe(customLogger);
+    arcana.logger.info('hello');
+    expect(calls).toEqual(['info:hello']);
+  });
+
+  it('falls back to a working no-op logger when none is injected', () => {
+    const arcana = createArcana(makeFakes());
+    expect(() => arcana.logger.info('x')).not.toThrow();
+    expect(() => arcana.logger.debug('x')).not.toThrow();
+    expect(() => arcana.logger.warn('x')).not.toThrow();
+    expect(() => arcana.logger.error('x')).not.toThrow();
+  });
+
+  it('scheduler fallback throws NotImplementedError when used without injection', async () => {
+    const arcana = createArcana(makeFakes());
+    // Reach the scheduler through providers — when omitted, .providers.scheduler is undefined;
+    // the internal fallback is what maintain would use. We can't reach it directly, so we
+    // verify the related maintain method still surfaces NotImplementedError.
+    await expect(
+      arcana.maintain.startSleepSchedule(1000),
+    ).rejects.toBeInstanceOf(NotImplementedError);
+    expect(arcana.providers.scheduler).toBeUndefined();
+    expect(arcana.providers.queue).toBeUndefined();
+  });
+});

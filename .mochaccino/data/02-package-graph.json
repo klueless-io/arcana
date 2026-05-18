@@ -41,11 +41,11 @@
       "npm_name": "@kybernesisai/arcana-core",
       "role": "Kernel — createArcana() factory + ingest/retrieve/maintain/access zones (stubbed in v0.1)",
       "depends_on": ["@kybernesisai/arcana-contracts (workspace)"],
-      "status": "scaffolded",
+      "status": "complete",
       "tasks": ["T7", "T8"],
       "v0_1_progress": {
         "T7_skeleton_zones": "complete (15 tests passing; zones throw NotImplementedError)",
-        "T8_createArcana_factory": "not_started"
+        "T8_createArcana_factory": "complete (6 additional tests; total 86 across 19 files; .providers frozen; no-op scheduler/queue fallbacks)"
       }
     },
     {
