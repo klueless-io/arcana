@@ -193,6 +193,7 @@ export function createArcana(opts: ArcanaOptions): Arcana {
 - Skip the compliance suite to "ship faster"
 - Add code to consume Arcana inside this repo (consumers live elsewhere)
 - Mix ESM and CJS — ESM-only, no dual builds
+- Rename public API names *post-publish* without a major version bump and a deprecation cycle (pre-publish, renames are free — see [ADR 001](./docs/decisions/001-method-renames-before-publish.md))
 
 ## Success Criteria (v0.1.0)
 

@@ -1,0 +1,74 @@
+{
+  "angle": "matrix",
+  "title": "Arcana Kernel Method Status",
+  "subtitle": "Which methods are implemented vs stubbed; demand-driven by KyberBot adoption",
+  "purpose": "Tracks the demand-driven implementation trail. Each method is either stubbed (throws NotImplementedError) or implemented with a real body. The 'driven_by' field names the consumer module that triggered the implementation.",
+  "generated": "2026-05-18",
+  "system": "arcana",
+  "status_legend": [
+    { "id": "stubbed", "symbol": "○", "label": "NotImplementedError stub" },
+    { "id": "implemented", "symbol": "✓", "label": "Real implementation + tests" },
+    { "id": "deferred", "symbol": "⊘", "label": "Deferred until demand surfaces" }
+  ],
+  "zones": [
+    {
+      "id": "ingest",
+      "label": "ingest",
+      "methods": [
+        { "name": "storeMemory", "status": "implemented", "driven_by": "kyberbot module #1 (timeline.ts)", "commit": "1f6a7c4", "scope_notes": "canonical row write only; chunking/embedding/extraction deferred" },
+        { "name": "ingestDocument", "status": "stubbed", "driven_by": null, "notes": "no consumer demand yet" }
+      ]
+    },
+    {
+      "id": "retrieve",
+      "label": "retrieve",
+      "methods": [
+        { "name": "hybridSearch", "status": "stubbed", "driven_by": null, "notes": "lands when KyberBot module #9 (hybrid-search.ts) adopted" },
+        { "name": "factRetrieval", "status": "stubbed", "driven_by": null, "notes": "lands when KyberBot module #8 (fact-retrieval.ts) adopted" },
+        { "name": "getEntityProfile", "status": "stubbed", "driven_by": null, "notes": "lands when KyberBot module #12 (user-profile.ts) adopted" }
+      ]
+    },
+    {
+      "id": "maintain",
+      "label": "maintain (sleep pipeline)",
+      "methods": [
+        { "name": "runSleepPipeline", "status": "stubbed", "driven_by": null, "notes": "13-step pipeline; lands with sleep modules (#11)" },
+        { "name": "startSleepSchedule", "status": "stubbed", "driven_by": null, "notes": "Scheduler provider integration" },
+        { "name": "stopSleepSchedule", "status": "stubbed", "driven_by": null }
+      ]
+    },
+    {
+      "id": "access.query",
+      "label": "access.query (read facade)",
+      "methods": [
+        { "name": "queryFacts", "status": "stubbed", "driven_by": null, "notes": "lands when KyberBot module #4 (fact-store.ts) adopted" },
+        { "name": "getNeighbors", "status": "stubbed", "driven_by": null },
+        { "name": "stats", "status": "stubbed", "driven_by": null },
+        { "name": "listContradictions", "status": "stubbed", "driven_by": null },
+        { "name": "listInsights", "status": "stubbed", "driven_by": null },
+        { "name": "readBlock", "status": "stubbed", "driven_by": null },
+        { "name": "getBlockHistory", "status": "stubbed", "driven_by": null }
+      ]
+    },
+    {
+      "id": "access.command",
+      "label": "access.command (write facade)",
+      "methods": [
+        { "name": "upsertEntity", "status": "implemented", "driven_by": "kyberbot module #2 (entity-graph.ts)", "commit": "17c3f48" },
+        { "name": "deleteEntity", "status": "implemented", "driven_by": "kyberbot module #2 (entity-graph.ts)", "commit": "17c3f48", "notes": "added deleteEntity to StructuredStore interface as part of this work (additive contract change)" },
+        { "name": "linkNodes", "status": "implemented", "driven_by": "kyberbot module #2 (entity-graph.ts)", "commit": "17c3f48", "notes": "renamed from linkMemories per ADR 001 (name disagreed with NodeRef signature)" },
+        { "name": "recordFact", "status": "stubbed", "driven_by": null, "notes": "lands when fact-store.ts adopted" },
+        { "name": "correctFact", "status": "stubbed", "driven_by": null },
+        { "name": "pin", "status": "stubbed", "driven_by": null },
+        { "name": "moveToTier", "status": "stubbed", "driven_by": null },
+        { "name": "deleteMemory", "status": "stubbed", "driven_by": null },
+        { "name": "updateBlock", "status": "stubbed", "driven_by": null }
+      ]
+    }
+  ],
+  "summary": {
+    "implemented_count": 4,
+    "stubbed_count": 17,
+    "total_kernel_methods": 21
+  }
+}

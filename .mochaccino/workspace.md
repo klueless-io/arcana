@@ -23,11 +23,12 @@
 
 | File | Shape | Refreshed after |
 |---|---|---|
-| `data/01-task-progress.json` | kanban (todo / in-progress / done) | every Tn |
-| `data/02-package-graph.json` | card-grid + dependency edges | T3, T5, T6, T7 |
-| `data/03-publish-pipeline.json` | data-flow (lint → typecheck → test → tag → publish) | T8, T9, T10a, T10b |
-| `data/04-contracts-surface.json` | matrix (schema × status, interface × status) | T3, T4, T5 |
-| `data/05-testkit-compliance.json` | matrix (provider × compliance test) | T6, T7 |
+| `data/01-task-progress.json` | kanban (todo / in-progress / done / deferred / v0.x) | every Tn + every v0.x kernel impl |
+| `data/02-package-graph.json` | card-grid + dependency edges | when package status changes |
+| `data/03-publish-pipeline.json` | data-flow (lint → typecheck → test → tag → publish) | when publish flow advances |
+| `data/04-contracts-surface.json` | matrix (schema × status, interface × status) | when contracts add/change |
+| `data/05-testkit-compliance.json` | matrix (provider × compliance test) | when testkit grows |
+| `data/06-kernel-methods.json` | matrix (zone × method × status × driven-by) | every kernel method implementation |
 
 ## Related workspaces
 

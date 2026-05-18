@@ -12,9 +12,11 @@ Arcana defines the shared memory substrate consumed by **KyberBot** (local agent
 
 - [`SPEC.md`](./SPEC.md) — the build contract: tech stack, project structure, success criteria, boundaries
 - [`PLAN.md`](./PLAN.md) — implementation plan + strategy (currently: demand-driven kernel implementation)
+- [`CHANGELOG.md`](./CHANGELOG.md) — release notes per package
 - [`docs/adoption/kyberbot.md`](./docs/adoption/kyberbot.md) — KyberBot adoption playbook
 - [`docs/adoption/kybernesis-brain.md`](./docs/adoption/kybernesis-brain.md) — Kybernesis Brain adoption playbook (handoff for Ian)
-- [`.mochaccino/`](./.mochaccino/) — live build documentation (refreshed at each task close)
+- [`docs/decisions/`](./docs/decisions/) — Architecture Decision Records (ADRs) for non-obvious design + process decisions
+- [`.mochaccino/`](./.mochaccino/) — live build documentation (refreshed at each task close + kernel method implementation)
 
 The architectural design source lives outside this repo: `~/dev/ad/brains/kybernesis/arcana-spec.md`.
 
