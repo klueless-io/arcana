@@ -33,3 +33,5 @@ Standard sections:
 - [003 — Facts as memories vs facts as triples](./003-facts-as-memories-vs-facts-as-triples.md) (*superseded by 004*)
 - [004 — Fact schema: sentence required, triple decomposition optional](./004-fact-schema-optional-triple-decomposition.md)
 - [005 — Memory is not append-only; `updateMemory` is first-class](./005-memory-is-not-append-only.md)
+- [006 — Contradiction.rationale addition + correctFact stub deletion](./006-contradiction-rationale-and-correctfact-deletion.md)
+- [007 — Arcana's shape thesis: portable rules, not portable records](./007-shape-thesis-portable-rules-not-records.md)
