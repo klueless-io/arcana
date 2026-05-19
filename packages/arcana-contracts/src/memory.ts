@@ -14,6 +14,16 @@ export const MemorySourceSchema = z.enum([
 ]);
 export type MemorySource = z.infer<typeof MemorySourceSchema>;
 
+/**
+ * Lifecycle status for a Memory. `active` is the default — the memory is live
+ * and visible to retrieval. `archived` removes it from default retrieval but
+ * keeps it queryable explicitly. `deleted` is a soft-delete tombstone — the
+ * row is retained for audit/supersession trails but treated as absent by all
+ * default reads. See ADR 007 §3.
+ */
+export const MemoryStatusSchema = z.enum(['active', 'archived', 'deleted']);
+export type MemoryStatus = z.infer<typeof MemoryStatusSchema>;
+
 export const MemorySchema = z
   .object({
     id: z.string().min(1),
@@ -29,6 +39,7 @@ export const MemorySchema = z
     isPinned: z.boolean(),
     contentHash: z.string(),
     source: MemorySourceSchema,
+    status: MemoryStatusSchema,
     scopes: ScopesSchema.optional(),
   })
   .strict();

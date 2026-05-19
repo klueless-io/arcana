@@ -20,6 +20,7 @@ const sampleMemory: Memory = {
   isPinned: false,
   contentHash: 'abc123',
   source: 'cli',
+  status: 'active',
   scopes: { org_id: 'org_1' },
 };
 
@@ -38,6 +39,23 @@ describe('MemorySchema', () => {
     expect(() =>
       MemorySchema.parse({ ...sampleMemory, tier: 'frozen' }),
     ).toThrow();
+  });
+
+  it('accepts each MemoryStatus value', () => {
+    for (const status of ['active', 'archived', 'deleted'] as const) {
+      expect(MemorySchema.parse({ ...sampleMemory, status }).status).toBe(status);
+    }
+  });
+
+  it('rejects an unknown status', () => {
+    expect(() =>
+      MemorySchema.parse({ ...sampleMemory, status: 'pending' }),
+    ).toThrow();
+  });
+
+  it('rejects a memory missing status', () => {
+    const { status: _drop, ...withoutStatus } = sampleMemory;
+    expect(() => MemorySchema.parse(withoutStatus)).toThrow();
   });
 });
 

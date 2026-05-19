@@ -17,7 +17,7 @@
       "label": "Data model (Zod schemas)",
       "source": "~/dev/ad/brains/kybernesis/arcana-spec.md §10",
       "rows": [
-        { "name": "Memory", "status": "complete", "test_file": "memory.test.ts" },
+        { "name": "Memory", "status": "complete", "test_file": "memory.test.ts", "evolution": ["v0.1 initial", "v0.x: ADR 007 — +status: 'active'|'archived'|'deleted' (Brain audit revealed Memory.status is a domain feature, not a Convex artifact; KyberBot also has it). ingest.storeMemory defaults status to 'active'."] },
         { "name": "Chunk", "status": "complete", "test_file": "memory.test.ts" },
         { "name": "Entity", "status": "complete", "test_file": "entity.test.ts" },
         { "name": "Edge", "status": "complete", "test_file": "edge.test.ts" },

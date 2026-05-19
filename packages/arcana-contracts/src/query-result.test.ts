@@ -31,6 +31,7 @@ describe('queryResultSchema', () => {
         isPinned: false,
         contentHash: 'hash',
         source: 'cli',
+        status: 'active',
       },
       generated_at: '2026-05-18T08:00:00.000Z',
       data_age_ms: 0,
