@@ -17,7 +17,8 @@
       "label": "ingest",
       "methods": [
         { "name": "storeMemory", "status": "implemented", "driven_by": "kyberbot module #1 (timeline.ts)", "commit": "1f6a7c4", "scope_notes": "canonical row write only; chunking/embedding/extraction deferred", "adopted_by": ["kyberbot/packages/cli/src/brain/timeline.ts (closed 2026-05-18, 5 integration tests passing)"] },
-        { "name": "ingestDocument", "status": "stubbed", "driven_by": null, "notes": "no consumer demand yet" }
+        { "name": "ingestDocument", "status": "stubbed", "driven_by": null, "notes": "no consumer demand yet" },
+        { "name": "[createArcana vector-optional]", "status": "implemented", "driven_by": "arcana-config merge / DVR review", "notes": "ArcanaOptions.vector is now optional. createMissingVectorStore() fallback added — same pattern as scheduler/queue stubs. Callers (including KyberBot) do not need to wire a VectorStore to construct an Arcana instance." }
       ]
     },
     {
@@ -78,7 +79,18 @@
     "total_kernel_methods_catalogued": 27,
     "write_parity_percent": 100,
     "read_parity_percent": 30,
-    "test_counts": { "tests": 191, "files": 23, "packages": 5, "all_passing": true },
+    "test_counts": { "tests": 193, "files": 23, "packages": 4, "all_passing": true },
+    "arcana_config_merge": "arcana-config package DELETED 2026-05-19; merged into arcana-core src/config/. loadConfig/getDefaultConfig/ENV_MAP/ConfigSchema now exported from @kybernesis/arcana-core.",
+    "provider_bug_fixes": [
+      "DVR-EC-001 (2026-05-19): arcana-provider-libsql connect() now mkdirSync(parent, {recursive:true}) before opening file-path database — fixes crash when data directory does not yet exist"
+    ],
+    "delivery_review_status": "CONDITIONAL PASS (2026-05-19). 6 patches identified: 2 Arcana-side (vector-optional + mkdir fix — both done). 4 KyberBot-side patches remaining before arcana-adoption branch can merge.",
+    "kyberbot_remaining_patches": [
+      "DVR-EC-002: temperature/maxTokens honesty in ClaudeLLMProvider — drop at type boundary with Omit + comment, or wire through CLI flags",
+      "DVR-BH-002/EC-006: OPENAI_API_KEY guard — wrap in try/catch or gate behind arcana.enabled flag",
+      "DVR-CQ-002/UT-005: extract bootArcana(root) from run.ts + add integration test",
+      "DVR-EC-007/BH-003: arcana-singleton double-init fix — dispose-then-reinit or throw on second call"
+    ],
     "consumers_actively_adopting": ["kyberbot (arcana-adoption branch, 22 commits, 724 tests)"],
     "kyberbot_modules_closed": 10,
     "kyberbot_modules_remaining": 5,

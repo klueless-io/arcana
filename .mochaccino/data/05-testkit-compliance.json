@@ -14,9 +14,9 @@
   ],
   "providers": [
     {
-      "id": "arcana-providers-libsql",
+      "id": "arcana-provider-libsql",
       "interface": "StructuredStore",
-      "v0_1_target": "Full StructuredStore over libsql — all 9 entity types, in-memory integration tests",
+      "v0_1_target": "Full StructuredStore over libsql — all 9 entity types, in-memory integration tests. DVR-EC-001 fix: mkdirSync parent dir on file-path connections.",
       "status": "complete",
       "closed": "2026-05-19",
       "tests": [
