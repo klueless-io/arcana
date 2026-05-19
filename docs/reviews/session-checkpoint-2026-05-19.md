@@ -148,3 +148,12 @@ You can now swap file: deps for version pins. Run pnpm install after.
 Open a new Claude Code session at `~/dev/kybernesis/arcana` and say:
 
 > "Read docs/reviews/session-checkpoint-2026-05-19.md and pick up from there. The immediate priority is completing the npm publish — I need to run `npm login` first then publish 5 packages in order."
+
+---
+
+## Next session prompt — Read implementation sprint
+
+When delivery reviews are done and arcana-adoption is merged, open a new Claude Code session at `~/dev/kybernesis/arcana` and say:
+
+> "Read docs/reviews/session-checkpoint-2026-05-19.md. KyberBot's arcana-adoption branch has merged. We're now starting the read implementation sprint. The work order is: (1) implement getEntityProfile in arcana-core — no vector needed, structured data assembly from live facts + insights; (2) implement factRetrieval structured version — fetch facts per entity, score, expand via graph edges, no vector; (3) build arcana-provider-sqlite-vec to unblock hybridSearch and remove ChromaDB from KyberBot; (4) implement hybridSearch against the sqlite-vec provider; (5) wire KyberBot's read modules to call Arcana instead of their own local implementations. Start with getEntityProfile."
+
