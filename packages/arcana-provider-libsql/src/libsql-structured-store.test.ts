@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import type { Memory, Entity, Fact, Contradiction, Edge, Insight, EntityProfile, AgentSelf, Chunk } from '@kybernesisai/arcana-contracts';
+import type { Memory, Entity, Fact, Contradiction, Edge, Insight, EntityProfile, AgentSelf, Chunk } from '@kybernesis/arcana-contracts';
 import { createLibsqlStructuredStore } from './libsql-structured-store.js';
 
 const baseMemory = (): Memory => ({

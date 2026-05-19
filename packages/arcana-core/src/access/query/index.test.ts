@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createNoopLogger, type Fact } from '@kybernesisai/arcana-contracts';
-import { createFakeStructuredStore } from '@kybernesisai/arcana-testkit/fakes';
+import { createNoopLogger, type Fact } from '@kybernesis/arcana-contracts';
+import { createFakeStructuredStore } from '@kybernesis/arcana-testkit/fakes';
 import { createQuery, type QueryApi, type QueryDeps } from './index.js';
 import { NotImplementedError } from '../../errors.js';
 

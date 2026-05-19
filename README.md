@@ -26,9 +26,9 @@ Until v0.1.0 publishes to npm, consumers reference Arcana packages via local `fi
 
 ```json
 "dependencies": {
-  "@kybernesisai/arcana-contracts": "file:../../arcana/packages/arcana-contracts",
-  "@kybernesisai/arcana-config":    "file:../../arcana/packages/arcana-config",
-  "@kybernesisai/arcana-core":      "file:../../arcana/packages/arcana-core"
+  "@kybernesis/arcana-contracts": "file:../../arcana/packages/arcana-contracts",
+  "@kybernesis/arcana-config":    "file:../../arcana/packages/arcana-config",
+  "@kybernesis/arcana-core":      "file:../../arcana/packages/arcana-core"
 }
 ```
 
@@ -38,11 +38,11 @@ Adjust the relative path based on the consumer's location. Each Arcana rebuild +
 
 | Package | Purpose |
 |---|---|
-| `@kybernesisai/arcana-contracts` | Zod schemas, provider interfaces, `Logger`, `QueryResult<T>` |
-| `@kybernesisai/arcana-config` | Zod-validated config loader |
-| `@kybernesisai/arcana-core` | Kernel — `createArcana()` factory + ingest/retrieve/maintain/access zones |
-| `@kybernesisai/arcana-testkit` | Provider compliance harness |
-| `@kybernesisai/arcana-providers-libsql` | Reference `StructuredStore` implementation |
+| `@kybernesis/arcana-contracts` | Zod schemas, provider interfaces, `Logger`, `QueryResult<T>` |
+| `@kybernesis/arcana-config` | Zod-validated config loader |
+| `@kybernesis/arcana-core` | Kernel — `createArcana()` factory + ingest/retrieve/maintain/access zones |
+| `@kybernesis/arcana-testkit` | Provider compliance harness |
+| `@kybernesis/arcana-providers-libsql` | Reference `StructuredStore` implementation |
 
 ## License
 

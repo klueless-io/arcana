@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createNoopLogger, type Entity } from '@kybernesisai/arcana-contracts';
+import { createNoopLogger, type Entity } from '@kybernesis/arcana-contracts';
 import {
   createFakeStructuredStore,
   createFakeVectorStore,
-} from '@kybernesisai/arcana-testkit/fakes';
+} from '@kybernesis/arcana-testkit/fakes';
 import { createCommand, type CommandApi, type CommandDeps } from './index.js';
 import { NotImplementedError } from '../../errors.js';
 import { djb2Hash } from '../../util/hash.js';

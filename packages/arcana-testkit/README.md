@@ -1,23 +1,23 @@
-# @kybernesisai/arcana-testkit
+# @kybernesis/arcana-testkit
 
 In-memory fake providers for testing Arcana consumers.
 
 ## Scope
 
-Each `createFakeX()` factory returns an object that satisfies the corresponding Arcana provider interface from `@kybernesisai/arcana-contracts`. Backed by JavaScript Maps + no persistence. Methods irrelevant to your test return sensible empty/no-op defaults rather than throwing.
+Each `createFakeX()` factory returns an object that satisfies the corresponding Arcana provider interface from `@kybernesis/arcana-contracts`. Backed by JavaScript Maps + no persistence. Methods irrelevant to your test return sensible empty/no-op defaults rather than throwing.
 
 This package exists so consumers can wire up `createArcana(...)` in tests with all four required providers without standing up libsql, ChromaDB, OpenAI, etc.
 
 ## Usage
 
 ```ts
-import { createArcana } from '@kybernesisai/arcana-core';
+import { createArcana } from '@kybernesis/arcana-core';
 import {
   createFakeStructuredStore,
   createFakeVectorStore,
   createFakeEmbeddingProvider,
   createFakeLLMProvider,
-} from '@kybernesisai/arcana-testkit/fakes';
+} from '@kybernesis/arcana-testkit/fakes';
 
 const structured = createFakeStructuredStore();
 const arcana = createArcana({

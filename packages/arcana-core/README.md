@@ -1,4 +1,4 @@
-# @kybernesisai/arcana-core
+# @kybernesis/arcana-core
 
 The Arcana kernel — implements the portable-cortex pattern.
 
@@ -28,7 +28,7 @@ The factory shape and method signatures are intentionally locked at v0.1 so `arc
 ## Usage (preview — T8 lands createArcana)
 
 ```ts
-import { createArcana } from '@kybernesisai/arcana-core';
+import { createArcana } from '@kybernesis/arcana-core';
 
 const arcana = createArcana({
   structured: myStructuredStore,

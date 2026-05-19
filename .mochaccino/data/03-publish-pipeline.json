@@ -19,11 +19,11 @@
         { "id": "lint", "label": "bun run lint", "status": "wired", "note": "Script exists; vacuously passes with no packages (--no-error-on-unmatched-pattern)" },
         { "id": "typecheck", "label": "bun run typecheck", "status": "wired", "note": "Script exists; guard skips tsc -b until packages/*/tsconfig.json exists" },
         { "id": "test", "label": "bun run test", "status": "wired", "note": "Vitest 2.1.9; passWithNoTests=true; vacuously passes with no test files" },
-        { "id": "publish_contracts", "label": "npm publish @kybernesisai/arcana-contracts", "status": "not_started" },
-        { "id": "publish_config", "label": "npm publish @kybernesisai/arcana-config", "status": "not_started" },
-        { "id": "publish_core", "label": "npm publish @kybernesisai/arcana-core", "status": "not_started" },
-        { "id": "publish_testkit", "label": "npm publish @kybernesisai/arcana-testkit", "status": "not_started" },
-        { "id": "publish_libsql", "label": "npm publish @kybernesisai/arcana-providers-libsql", "status": "not_started" },
+        { "id": "publish_contracts", "label": "npm publish @kybernesis/arcana-contracts", "status": "not_started" },
+        { "id": "publish_config", "label": "npm publish @kybernesis/arcana-config", "status": "not_started" },
+        { "id": "publish_core", "label": "npm publish @kybernesis/arcana-core", "status": "not_started" },
+        { "id": "publish_testkit", "label": "npm publish @kybernesis/arcana-testkit", "status": "not_started" },
+        { "id": "publish_libsql", "label": "npm publish @kybernesis/arcana-providers-libsql", "status": "not_started" },
         { "id": "tag", "label": "git tag v0.1.0 && git push --tags", "status": "not_started" }
       ]
     },

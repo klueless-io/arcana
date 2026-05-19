@@ -8,7 +8,7 @@ import {
   type Scheduler,
   type JobQueue,
   type Logger,
-} from '@kybernesisai/arcana-contracts';
+} from '@kybernesis/arcana-contracts';
 import { createIngest, type IngestApi } from '../../ingest/index.js';
 import { createRetrieve, type RetrieveApi } from '../../retrieve/index.js';
 import { createMaintain, type MaintainApi } from '../../maintain/index.js';

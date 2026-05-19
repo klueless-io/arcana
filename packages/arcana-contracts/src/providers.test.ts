@@ -2,7 +2,7 @@
  * Provider interfaces are TypeScript-only contracts (no runtime code). These
  * tests verify the interfaces are *implementable* by constructing minimal
  * fake adapters and exercising their shape. Richer in-memory fakes for the
- * full compliance suite will live in @kybernesisai/arcana-testkit.
+ * full compliance suite will live in @kybernesis/arcana-testkit.
  */
 
 import { describe, it, expect } from 'vitest';

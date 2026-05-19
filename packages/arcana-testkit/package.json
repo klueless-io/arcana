@@ -1,5 +1,5 @@
 {
-  "name": "@kybernesisai/arcana-testkit",
+  "name": "@kybernesis/arcana-testkit",
   "version": "0.1.0",
   "description": "In-memory fake providers for testing Arcana consumers",
   "license": "MIT",
@@ -27,7 +27,7 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
-    "@kybernesisai/arcana-contracts": "workspace:*"
+    "@kybernesis/arcana-contracts": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

@@ -12,7 +12,7 @@ import type {
   AgentSelf,
   NodeRef,
   MemoryFilter,
-} from '@kybernesisai/arcana-contracts';
+} from '@kybernesis/arcana-contracts';
 import { DDL } from './schema.js';
 
 // ─── helpers ────────────────────────────────────────────────────────────────

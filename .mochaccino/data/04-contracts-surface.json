@@ -2,7 +2,7 @@
   "angle": "matrix",
   "title": "Arcana Contracts Surface",
   "subtitle": "Every Zod schema and provider interface that v0.1.0 must ship",
-  "purpose": "Tracks what's defined in @kybernesisai/arcana-contracts. Source of truth is arcana-spec.md §10 in the brain. Status flips to 'complete' when the Zod schema validates sample data round-trips in a test.",
+  "purpose": "Tracks what's defined in @kybernesis/arcana-contracts. Source of truth is arcana-spec.md §10 in the brain. Status flips to 'complete' when the Zod schema validates sample data round-trips in a test.",
   "generated": "2026-05-18",
   "system": "arcana",
   "milestone": "v0.1.0",

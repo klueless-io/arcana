@@ -26,7 +26,7 @@ import type { Scopes } from './scopes.js';
 
 /**
  * Persists the structured data model. Every provider implementation must pass
- * the @kybernesisai/arcana-testkit compliance suite.
+ * the @kybernesis/arcana-testkit compliance suite.
  */
 export interface StructuredStore {
   // Lifecycle

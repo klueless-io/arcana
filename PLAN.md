@@ -8,9 +8,9 @@ Three packages shipped, built, tested:
 
 | # | Package | Status | Tests |
 |---|---|---|---|
-| ✓ | `@kybernesisai/arcana-contracts` | Complete (T4 + T5) | 37 |
-| ✓ | `@kybernesisai/arcana-config` | Complete (T6) | 28 |
-| ✓ | `@kybernesisai/arcana-core` | Complete (T7 + T8) | 21 |
+| ✓ | `@kybernesis/arcana-contracts` | Complete (T4 + T5) | 37 |
+| ✓ | `@kybernesis/arcana-config` | Complete (T6) | 28 |
+| ✓ | `@kybernesis/arcana-core` | Complete (T7 + T8) | 21 |
 | | **Total** | | **86 across 19 files** |
 
 Includes: 9 Zod schemas, 7 provider interfaces, Logger, QueryResult, three-layer config loader, kernel zone factories (`createIngest`, `createRetrieve`, `createMaintain`, `createQuery`, `createCommand`), and the `createArcana()` top-level factory. All kernel method bodies throw `NotImplementedError` — that's intentional; see strategy below.
@@ -64,9 +64,9 @@ KyberBot references Arcana via `pnpm` `file:` deps:
 
 ```json
 "dependencies": {
-  "@kybernesisai/arcana-contracts": "file:../../arcana/packages/arcana-contracts",
-  "@kybernesisai/arcana-config": "file:../../arcana/packages/arcana-config",
-  "@kybernesisai/arcana-core": "file:../../arcana/packages/arcana-core"
+  "@kybernesis/arcana-contracts": "file:../../arcana/packages/arcana-contracts",
+  "@kybernesis/arcana-config": "file:../../arcana/packages/arcana-config",
+  "@kybernesis/arcana-core": "file:../../arcana/packages/arcana-core"
 }
 ```
 

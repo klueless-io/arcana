@@ -8,7 +8,7 @@ import type {
   StructuredStore,
   Logger,
   QueryResult,
-} from '@kybernesisai/arcana-contracts';
+} from '@kybernesis/arcana-contracts';
 import { NotImplementedError } from '../../errors.js';
 
 export interface QueryStatsResult {

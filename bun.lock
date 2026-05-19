@@ -14,43 +14,43 @@
       },
     },
     "packages/arcana-config": {
-      "name": "@kybernesisai/arcana-config",
+      "name": "@kybernesis/arcana-config",
       "version": "0.1.0",
       "dependencies": {
         "zod": "^3.23.0",
       },
     },
     "packages/arcana-contracts": {
-      "name": "@kybernesisai/arcana-contracts",
+      "name": "@kybernesis/arcana-contracts",
       "version": "0.1.0",
       "dependencies": {
         "zod": "^3.23.0",
       },
     },
     "packages/arcana-core": {
-      "name": "@kybernesisai/arcana-core",
+      "name": "@kybernesis/arcana-core",
       "version": "0.1.0",
       "dependencies": {
-        "@kybernesisai/arcana-contracts": "workspace:*",
+        "@kybernesis/arcana-contracts": "workspace:*",
       },
       "devDependencies": {
-        "@kybernesisai/arcana-testkit": "workspace:*",
+        "@kybernesis/arcana-testkit": "workspace:*",
         "@types/node": "^20.11.0",
       },
     },
     "packages/arcana-provider-libsql": {
-      "name": "@kybernesisai/arcana-provider-libsql",
+      "name": "@kybernesis/arcana-provider-libsql",
       "version": "0.1.0",
       "dependencies": {
-        "@kybernesisai/arcana-contracts": "workspace:*",
+        "@kybernesis/arcana-contracts": "workspace:*",
         "libsql": "0.5.29",
       },
     },
     "packages/arcana-testkit": {
-      "name": "@kybernesisai/arcana-testkit",
+      "name": "@kybernesis/arcana-testkit",
       "version": "0.1.0",
       "dependencies": {
-        "@kybernesisai/arcana-contracts": "workspace:*",
+        "@kybernesis/arcana-contracts": "workspace:*",
       },
     },
   },
@@ -87,15 +87,15 @@
 
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 
-    "@kybernesisai/arcana-config": ["@kybernesisai/arcana-config@workspace:packages/arcana-config"],
+    "@kybernesis/arcana-config": ["@kybernesis/arcana-config@workspace:packages/arcana-config"],
 
-    "@kybernesisai/arcana-contracts": ["@kybernesisai/arcana-contracts@workspace:packages/arcana-contracts"],
+    "@kybernesis/arcana-contracts": ["@kybernesis/arcana-contracts@workspace:packages/arcana-contracts"],
 
-    "@kybernesisai/arcana-core": ["@kybernesisai/arcana-core@workspace:packages/arcana-core"],
+    "@kybernesis/arcana-core": ["@kybernesis/arcana-core@workspace:packages/arcana-core"],
 
-    "@kybernesisai/arcana-provider-libsql": ["@kybernesisai/arcana-provider-libsql@workspace:packages/arcana-provider-libsql"],
+    "@kybernesis/arcana-provider-libsql": ["@kybernesis/arcana-provider-libsql@workspace:packages/arcana-provider-libsql"],
 
-    "@kybernesisai/arcana-testkit": ["@kybernesisai/arcana-testkit@workspace:packages/arcana-testkit"],
+    "@kybernesis/arcana-testkit": ["@kybernesis/arcana-testkit@workspace:packages/arcana-testkit"],
 
     "@libsql/darwin-arm64": ["@libsql/darwin-arm64@0.5.29", "", { "os": "darwin", "cpu": "arm64" }, "sha512-K+2RIB1OGFPYQbfay48GakLhqf3ArcbHqPFu7EZiaUcRgFcdw8RoltsMyvbj5ix2fY0HV3Q3Ioa/ByvQdaSM0A=="],
 

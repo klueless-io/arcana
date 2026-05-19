@@ -1,5 +1,5 @@
 {
-  "name": "@kybernesisai/arcana-core",
+  "name": "@kybernesis/arcana-core",
   "version": "0.1.0",
   "description": "Arcana kernel — portable-cortex pattern (ingest, retrieve, maintain, access zones)",
   "license": "MIT",
@@ -51,10 +51,10 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
-    "@kybernesisai/arcana-contracts": "workspace:*"
+    "@kybernesis/arcana-contracts": "workspace:*"
   },
   "devDependencies": {
-    "@kybernesisai/arcana-testkit": "workspace:*",
+    "@kybernesis/arcana-testkit": "workspace:*",
     "@types/node": "^20.11.0"
   },
   "publishConfig": {

@@ -3,7 +3,7 @@ import type {
   VectorItem,
   VectorQueryOpts,
   VectorMatch,
-} from '@kybernesisai/arcana-contracts';
+} from '@kybernesis/arcana-contracts';
 
 /**
  * In-memory VectorStore fake. Vector query returns the first `topK` matches

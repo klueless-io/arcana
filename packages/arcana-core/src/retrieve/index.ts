@@ -9,7 +9,7 @@ import type {
   RerankerProvider,
   Logger,
   QueryResult,
-} from '@kybernesisai/arcana-contracts';
+} from '@kybernesis/arcana-contracts';
 import { NotImplementedError } from '../errors.js';
 
 export interface HybridSearchInput {

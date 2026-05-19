@@ -7,7 +7,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added — `@kybernesisai/arcana-contracts` (ADR 007 §3.1)
+### Added — `@kybernesis/arcana-contracts` (ADR 007 §3.1)
 - `MemoryStatusSchema` — `z.enum(['active', 'archived', 'deleted'])` lifecycle vocab for Memory rows
 - `MemorySchema.status` — required field of type `MemoryStatusSchema`. Domain feature surfaced by the Brain-vs-Convex audit; both KyberBot and Brain track memory lifecycle, Arcana now does too. `ingest.storeMemory` defaults `status` to `'active'`. ([ADR 007](./docs/decisions/007-shape-thesis-portable-rules-not-records.md))
 
@@ -24,25 +24,25 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Flat-string callers (KyberBot) migrate trivially: wrap each string in `{ value }`. Brain's structured arrays project naturally onto this shape.
 - 5 new tests: value-only round-trip, fully-populated round-trip, empty value rejection, out-of-range confidence rejection, strict-mode unknown-key rejection. Plus regression test confirming raw strings in staticFacts now throw. ([ADR 007](./docs/decisions/007-shape-thesis-portable-rules-not-records.md) §4)
 
-### Added — `@kybernesisai/arcana-core`
+### Added — `@kybernesis/arcana-core`
 - `ingest.storeMemory(input)` — canonical row write with defaults + djb2 contentHash + UUID id ([commit 1f6a7c4](./))
 - `command.upsertEntity(entity)` — persist an Entity via the structured store
 - `command.deleteEntity(id)` — delete an Entity by id
 - `command.linkNodes(from, to, relation, opts?)` — typed edge between any two NodeRefs (memory|entity), returns edge id
 - `util/hash.djb2Hash` — 8-char hex hash for content deduplication
 
-### Added — `@kybernesisai/arcana-testkit` (new package)
+### Added — `@kybernesis/arcana-testkit` (new package)
 - `createFakeStructuredStore()` — in-memory fake with Map-backed CRUD
 - `createFakeVectorStore()` — in-memory fake with deterministic dot-product search
 - `createFakeEmbeddingProvider()` — byte-hash to 256-dim normalized vector (not for production)
 - `createFakeLLMProvider()` — echo-with-prefix for prompt-passthrough assertions
 
-### Added — `@kybernesisai/arcana-contracts`
+### Added — `@kybernesis/arcana-contracts`
 - `StructuredStore.deleteEntity(id)` method (additive interface change)
 
-### Changed — `@kybernesisai/arcana-core`
+### Changed — `@kybernesis/arcana-core`
 - **Renamed**: `command.linkMemories` → `command.linkNodes` ([ADR 001](./docs/decisions/001-method-renames-before-publish.md))
-- Tests now use `@kybernesisai/arcana-testkit/fakes` instead of inline fakes
+- Tests now use `@kybernesis/arcana-testkit/fakes` instead of inline fakes
 
 ### Documentation
 - `docs/adoption/kyberbot.md` — full adoption playbook (workspace setup, demand-driven rule, per-module recipe, cross-session protocol)

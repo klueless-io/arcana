@@ -1,4 +1,4 @@
-# @kybernesisai/arcana-config
+# @kybernesis/arcana-config
 
 Zod-validated configuration loader for the Arcana kernel.
 
@@ -13,7 +13,7 @@ Three layers, in precedence order (later wins):
 ## Usage
 
 ```ts
-import { loadConfig } from '@kybernesisai/arcana-config';
+import { loadConfig } from '@kybernesis/arcana-config';
 
 // Defaults only
 const defaults = loadConfig();

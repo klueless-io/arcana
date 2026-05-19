@@ -1,6 +1,6 @@
 # KyberBot → Arcana adoption playbook
 
-How KyberBot incrementally rips out `packages/cli/src/brain/*` and replaces it with `@kybernesisai/arcana-*` imports.
+How KyberBot incrementally rips out `packages/cli/src/brain/*` and replaces it with `@kybernesis/arcana-*` imports.
 
 This document is the **contract between two Claude Code sessions**:
 - **Arcana session** at `~/dev/kybernesis/arcana/` — implements kernel methods on demand
@@ -29,9 +29,9 @@ The `arcana-adoption` branch is **long-running**. It probably never merges to ma
 Edit `packages/cli/package.json` and add to `dependencies`:
 
 ```json
-"@kybernesisai/arcana-contracts": "file:../../../arcana/packages/arcana-contracts",
-"@kybernesisai/arcana-config":    "file:../../../arcana/packages/arcana-config",
-"@kybernesisai/arcana-core":      "file:../../../arcana/packages/arcana-core"
+"@kybernesis/arcana-contracts": "file:../../../arcana/packages/arcana-contracts",
+"@kybernesis/arcana-config":    "file:../../../arcana/packages/arcana-config",
+"@kybernesis/arcana-core":      "file:../../../arcana/packages/arcana-core"
 ```
 
 (`kyberbot/` and `arcana/` are siblings under `~/dev/kybernesis/`, so `../../../arcana/...` is correct from `packages/cli/`.)
@@ -46,7 +46,7 @@ pnpm install
 
 ```bash
 pnpm --filter @kyberbot/cli exec node -e "
-  const { createArcana } = require('@kybernesisai/arcana-core');
+  const { createArcana } = require('@kybernesis/arcana-core');
   console.log(typeof createArcana);
 "
 # expect: function
@@ -56,7 +56,7 @@ When Arcana's source changes, refresh in KyberBot with `pnpm install` (pnpm re-l
 
 ### Known risk — workspace:* resolution
 
-`arcana-core/package.json` declares `"@kybernesisai/arcana-contracts": "workspace:*"`. That's a Bun-workspace protocol. When pnpm installs arcana-core via `file:`, it may fail to resolve `workspace:*` because KyberBot isn't part of Arcana's workspace.
+`arcana-core/package.json` declares `"@kybernesis/arcana-contracts": "workspace:*"`. That's a Bun-workspace protocol. When pnpm installs arcana-core via `file:`, it may fail to resolve `workspace:*` because KyberBot isn't part of Arcana's workspace.
 
 **If pnpm install errors on that spec**: don't try to fix it yourself. Write a `NEEDS` entry in the comms file (`~/dev/kybernesis/.comms/arcana-kyberbot.md`) with the exact error. The Arcana session will either add a pnpm `overrides` block or rewrite Arcana's dep spec to use a version range. Fast turnaround.
 
@@ -74,7 +74,7 @@ Suggested KyberBot-side pattern:
 The provider interfaces declare `connect(): Promise<void>` and `disconnect(): Promise<void>` — your singleton lifecycle wraps these.
 
 **Config sourcing** is also your call:
-- Option A: Use `@kybernesisai/arcana-config`'s `loadConfig({env, filePath})` and map identity.yaml fields into Arcana's config shape
+- Option A: Use `@kybernesis/arcana-config`'s `loadConfig({env, filePath})` and map identity.yaml fields into Arcana's config shape
 - Option B: Skip arcana-config entirely; hand-roll `ArcanaOptions` from identity.yaml directly
 
 Either pattern is fine. Arcana has no opinion.
@@ -122,7 +122,7 @@ Update any internal imports that still use the legacy file. The `.legacy.ts` sta
 ### Step 3 — Write the new module
 
 Create a new `packages/cli/src/brain/<module>.ts` that:
-- Imports types from `@kybernesisai/arcana-contracts`
+- Imports types from `@kybernesis/arcana-contracts`
 - Calls methods on an Arcana instance created via `createArcana(...)` at the KyberBot agent's boot
 - Preserves the **public surface** the old module exposed (so callers don't have to change yet)
 
@@ -130,7 +130,7 @@ Example sketch for `timeline.ts`:
 
 ```ts
 // packages/cli/src/brain/timeline.ts
-import type { Memory } from '@kybernesisai/arcana-contracts';
+import type { Memory } from '@kybernesis/arcana-contracts';
 import { getArcanaInstance } from './arcana-singleton.js';
 
 export async function storeTimelineEvent(input: { /* old shape */ }): Promise<string> {
@@ -260,7 +260,7 @@ notes: validates input with MemorySchema before persistence; assigns id via cryp
 | Symptom | Likely cause | Where to fix |
 |---|---|---|
 | `NotImplementedError` thrown from Arcana | Stub still in place | Arcana session: implement the named method |
-| TypeScript error on import from `@kybernesisai/arcana-*` | Contract drift between Arcana types and KyberBot expectations | Arcana session: revise contract (carefully — every consumer sees this); update both sides |
+| TypeScript error on import from `@kybernesis/arcana-*` | Contract drift between Arcana types and KyberBot expectations | Arcana session: revise contract (carefully — every consumer sees this); update both sides |
 | Runtime error in Arcana code | Bug in the implementation | Arcana session: fix, add regression test |
 | KyberBot test was testing implementation details (e.g., specific SQL emitted) | Old test was too coupled to the old impl | KyberBot session: rewrite test as a behavior test |
 | `pnpm install` doesn't pick up Arcana changes | `file:` dep cache stale | `rm -rf node_modules` in kyberbot, re-`pnpm install` |

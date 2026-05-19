@@ -10,7 +10,7 @@ It implements the **portable-cortex pattern**: a `kernel` (data model + sleep pi
 
 **Users**: KyberBot (Ian) and Kybernesis cloud (David, Martin). Secondary: any future Kybernesis product that needs the same memory primitives.
 
-**Success looks like**: both consumers depend on `@kybernesisai/arcana-*` for memory primitives; the next decay-semantics or relation-vocab change is made in one place, not two; drift between the two products stops compounding.
+**Success looks like**: both consumers depend on `@kybernesis/arcana-*` for memory primitives; the next decay-semantics or relation-vocab change is made in one place, not two; drift between the two products stops compounding.
 
 The architectural design source is `~/dev/ad/brains/kybernesis/arcana-spec.md` (kernel surface, sleep pipeline, gap analysis). This document is the **build contract**.
 
@@ -23,11 +23,11 @@ The architectural design source is `~/dev/ad/brains/kybernesis/arcana-spec.md` (
 | Build | Plain `tsc` per package — no bundler |
 | Package mgr | **Bun workspaces** (≥ 1.1) |
 | Validation | Zod 3 (re-exported from `arcana-contracts`) |
-| Tests | Vitest 2.x + `@kybernesisai/arcana-testkit` (provider compliance suite) |
+| Tests | Vitest 2.x + `@kybernesis/arcana-testkit` (provider compliance suite) |
 | Logging | Injected `Logger` interface — no logger dependency |
 | Publish | Manual version bump → GH Actions auto-tag + idempotent `npm view` skip |
 | License | MIT |
-| npm scope | `@kybernesisai/arcana-*`, public registry |
+| npm scope | `@kybernesis/arcana-*`, public registry |
 | Repo | `KybernesisAI/arcana` on GitHub, public |
 
 ## Commands
@@ -48,8 +48,8 @@ bun run lint               # eslint . --fix
 bun run typecheck          # tsc --noEmit
 
 # Per-package
-bun --filter @kybernesisai/arcana-core run build
-bun --filter @kybernesisai/arcana-core run test
+bun --filter @kybernesis/arcana-core run build
+bun --filter @kybernesis/arcana-core run test
 
 # Release (manual)
 bun run version:bump       # interactive version bump
@@ -108,7 +108,7 @@ import type {
   VectorStore,
   EmbeddingProvider,
   LLMProvider,
-} from '@kybernesisai/arcana-contracts';
+} from '@kybernesis/arcana-contracts';
 
 export interface ArcanaOptions {
   structured: StructuredStore;
@@ -162,7 +162,7 @@ export function createArcana(opts: ArcanaOptions): Arcana {
 - **Location**: `packages/<pkg>/src/**/*.test.ts` co-located with sources.
 - **Levels**:
   - **Unit** (kernel): pure-function tests against fakes from `arcana-testkit`. Cover decay math, RRF, Jaccard, tier classification.
-  - **Compliance** (providers): every provider runs the `@kybernesisai/arcana-testkit` suite. Same assertions across libsql / Convex / Chroma / OpenAI — that's how we know the contract holds.
+  - **Compliance** (providers): every provider runs the `@kybernesis/arcana-testkit` suite. Same assertions across libsql / Convex / Chroma / OpenAI — that's how we know the contract holds.
   - **Integration**: one smoke test per provider that exercises createArcana() with real backends (libsql in tmpfile, etc.). Off the default CI path; run via `bun run test:integration`.
 - **Coverage**: not enforced at v0.1.0. Targets land at v0.2.
 - **No mocks of internals** — provide a fake adapter via `arcana-testkit` instead.
@@ -200,7 +200,7 @@ export function createArcana(opts: ArcanaOptions): Arcana {
 Specific, testable:
 
 - [ ] `bun install && bun run build && bun run test` passes cleanly on a fresh clone
-- [ ] Five packages publish to npm: `@kybernesisai/arcana-contracts`, `-core`, `-config`, `-testkit`, `-providers-libsql`
+- [ ] Five packages publish to npm: `@kybernesis/arcana-contracts`, `-core`, `-config`, `-testkit`, `-providers-libsql`
 - [ ] GH Actions `publish.yml` is idempotent — re-running on an already-published version is a no-op
 - [ ] `createArcana()` factory exists and accepts the documented options; calling it returns an object with `.ingest`, `.retrieve`, `.maintain`
 - [ ] `arcana-testkit` exposes a `runComplianceSuite(provider)` function (suite may be a single placeholder test at v0.1)

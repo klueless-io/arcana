@@ -11,7 +11,7 @@ import type {
   AgentSelf,
   NodeRef,
   MemoryFilter,
-} from '@kybernesisai/arcana-contracts';
+} from '@kybernesis/arcana-contracts';
 
 /**
  * In-memory StructuredStore fake. Backed by Maps; no persistence.

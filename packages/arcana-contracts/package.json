@@ -1,5 +1,5 @@
 {
-  "name": "@kybernesisai/arcana-contracts",
+  "name": "@kybernesis/arcana-contracts",
   "version": "0.1.0",
   "description": "Zod schemas, provider interfaces, and shared types for Arcana",
   "license": "MIT",

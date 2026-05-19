@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Memory } from '@kybernesisai/arcana-contracts';
+import type { Memory } from '@kybernesis/arcana-contracts';
 import { createFakeStructuredStore } from './structured-store.js';
 
 const sample: Memory = {

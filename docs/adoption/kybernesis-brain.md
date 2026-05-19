@@ -1,6 +1,6 @@
 # Kybernesis Brain → Arcana adoption playbook (handoff for Ian)
 
-How Kybernesis Brain (`~/dev/kybernesis/kybernesis-brain/`) incrementally adopts `@kybernesisai/arcana-*` packages.
+How Kybernesis Brain (`~/dev/kybernesis/kybernesis-brain/`) incrementally adopts `@kybernesis/arcana-*` packages.
 
 This document is intended as a **handoff from David to Ian**. The playbook is structurally identical to `kyberbot.md` — same demand-driven rule, same per-module migration recipe — but customized for the Convex + queue-worker + Cloudflare Workers architecture.
 
@@ -16,9 +16,9 @@ Add Arcana packages as local deps in the relevant app's `package.json` (e.g., `a
 
 ```json
 "dependencies": {
-  "@kybernesisai/arcana-contracts": "file:../../../arcana/packages/arcana-contracts",
-  "@kybernesisai/arcana-config":    "file:../../../arcana/packages/arcana-config",
-  "@kybernesisai/arcana-core":      "file:../../../arcana/packages/arcana-core"
+  "@kybernesis/arcana-contracts": "file:../../../arcana/packages/arcana-contracts",
+  "@kybernesis/arcana-config":    "file:../../../arcana/packages/arcana-config",
+  "@kybernesis/arcana-core":      "file:../../../arcana/packages/arcana-core"
 }
 ```
 
@@ -28,7 +28,7 @@ Then at the kybernesis-brain repo root:
 npm install        # kybernesis-brain uses npm, not pnpm
 ```
 
-**Note on Convex**: Convex functions run in a special runtime. The `apps/convex/` package can import `@kybernesisai/arcana-contracts` for *types* (and Zod schemas for runtime validation), but `arcana-core` methods that depend on Node-only APIs (filesystem, process, etc.) won't work inside Convex functions. Stick to:
+**Note on Convex**: Convex functions run in a special runtime. The `apps/convex/` package can import `@kybernesis/arcana-contracts` for *types* (and Zod schemas for runtime validation), but `arcana-core` methods that depend on Node-only APIs (filesystem, process, etc.) won't work inside Convex functions. Stick to:
 
 - `apps/convex/` → import from `arcana-contracts` only (types + Zod)
 - `apps/queue-worker/` (BullMQ, Render) → can use `arcana-core` fully
@@ -69,7 +69,7 @@ For Convex mutations specifically (`apps/convex/convex/mutations/*`), the migrat
 ```ts
 // apps/convex/convex/mutations/memory.ts
 import { mutation } from './_generated/server.js';
-import { MemorySchema, type Memory } from '@kybernesisai/arcana-contracts';
+import { MemorySchema, type Memory } from '@kybernesis/arcana-contracts';
 import { v } from 'convex/values';
 
 export const createMemory = mutation({

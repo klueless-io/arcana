@@ -1,7 +1,7 @@
 import type {
   LLMProvider,
   LLMCompleteOpts,
-} from '@kybernesisai/arcana-contracts';
+} from '@kybernesis/arcana-contracts';
 
 /**
  * Echo LLMProvider fake. Returns a deterministic transformation of the

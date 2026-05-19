@@ -1,5 +1,5 @@
 {
-  "name": "@kybernesisai/arcana-provider-libsql",
+  "name": "@kybernesis/arcana-provider-libsql",
   "version": "0.1.0",
   "description": "LibSQL/SQLite StructuredStore provider for Arcana",
   "license": "MIT",
@@ -23,7 +23,7 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
-    "@kybernesisai/arcana-contracts": "workspace:*",
+    "@kybernesis/arcana-contracts": "workspace:*",
     "libsql": "0.5.29"
   },
   "publishConfig": {

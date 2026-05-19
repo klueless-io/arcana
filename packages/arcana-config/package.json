@@ -1,5 +1,5 @@
 {
-  "name": "@kybernesisai/arcana-config",
+  "name": "@kybernesis/arcana-config",
   "version": "0.1.0",
   "description": "Zod-validated configuration loader for Arcana — defaults → file → env",
   "license": "MIT",

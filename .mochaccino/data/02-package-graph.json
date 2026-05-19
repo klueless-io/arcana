@@ -14,7 +14,7 @@
   "packages": [
     {
       "id": "arcana-contracts",
-      "npm_name": "@kybernesisai/arcana-contracts",
+      "npm_name": "@kybernesis/arcana-contracts",
       "role": "Base — Zod schemas, provider interfaces, Logger, QueryResult envelope, ARP scopes",
       "depends_on": ["zod@^3.23.0"],
       "status": "complete",
@@ -27,7 +27,7 @@
     },
     {
       "id": "arcana-config",
-      "npm_name": "@kybernesisai/arcana-config",
+      "npm_name": "@kybernesis/arcana-config",
       "role": "Zod-validated config loader (defaults → file → env)",
       "depends_on": ["zod@^3.23.0"],
       "status": "complete",
@@ -38,9 +38,9 @@
     },
     {
       "id": "arcana-core",
-      "npm_name": "@kybernesisai/arcana-core",
+      "npm_name": "@kybernesis/arcana-core",
       "role": "Kernel — createArcana() factory + ingest/retrieve/maintain/access zones (stubbed in v0.1)",
-      "depends_on": ["@kybernesisai/arcana-contracts (workspace)"],
+      "depends_on": ["@kybernesis/arcana-contracts (workspace)"],
       "status": "complete",
       "tasks": ["T7", "T8"],
       "v0_1_progress": {
@@ -50,15 +50,15 @@
     },
     {
       "id": "arcana-testkit",
-      "npm_name": "@kybernesisai/arcana-testkit",
+      "npm_name": "@kybernesis/arcana-testkit",
       "role": "In-memory fake providers for consumer integration tests (compliance harness deferred)",
-      "depends_on": ["@kybernesisai/arcana-contracts (workspace)"],
+      "depends_on": ["@kybernesis/arcana-contracts (workspace)"],
       "status": "scaffolded",
       "tasks": ["T9"]
     },
     {
       "id": "arcana-providers-libsql",
-      "npm_name": "@kybernesisai/arcana-providers-libsql",
+      "npm_name": "@kybernesis/arcana-providers-libsql",
       "role": "Full StructuredStore implementation over libsql (same sync SQLite binding as KyberBot). All 9 entity types. In-memory integration tests. Unblocks KyberBot wiring initArcana().",
       "depends_on": ["arcana-contracts", "libsql@0.5.x"],
       "status": "scaffolded",

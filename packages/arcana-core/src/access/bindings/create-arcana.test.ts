@@ -5,7 +5,7 @@ import type {
   EmbeddingProvider,
   LLMProvider,
   Logger,
-} from '@kybernesisai/arcana-contracts';
+} from '@kybernesis/arcana-contracts';
 import { createArcana, type ArcanaOptions } from './create-arcana.js';
 import { NotImplementedError } from '../../errors.js';
 

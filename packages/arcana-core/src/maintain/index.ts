@@ -7,7 +7,7 @@ import type {
   JobQueue,
   Logger,
   Scopes,
-} from '@kybernesisai/arcana-contracts';
+} from '@kybernesis/arcana-contracts';
 import { NotImplementedError } from '../errors.js';
 
 /**

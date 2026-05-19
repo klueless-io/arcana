@@ -1,4 +1,4 @@
-import type { EmbeddingProvider } from '@kybernesisai/arcana-contracts';
+import type { EmbeddingProvider } from '@kybernesis/arcana-contracts';
 
 /**
  * Deterministic byte-hash EmbeddingProvider fake. Maps text → 256-dim vector

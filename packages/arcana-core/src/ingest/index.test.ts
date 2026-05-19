@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createNoopLogger } from '@kybernesisai/arcana-contracts';
+import { createNoopLogger } from '@kybernesis/arcana-contracts';
 import {
   createFakeStructuredStore,
   createFakeVectorStore,
   createFakeEmbeddingProvider,
   createFakeLLMProvider,
-} from '@kybernesisai/arcana-testkit/fakes';
+} from '@kybernesis/arcana-testkit/fakes';
 import { createIngest, type IngestApi, type IngestDeps } from './index.js';
 import { NotImplementedError } from '../errors.js';
 

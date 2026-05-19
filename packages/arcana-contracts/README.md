@@ -1,4 +1,4 @@
-# @kybernesisai/arcana-contracts
+# @kybernesis/arcana-contracts
 
 Zod schemas and inferred TypeScript types for the Arcana knowledge-brain kernel.
 
@@ -20,12 +20,12 @@ Plus the cross-cutting `Scopes` type for ARP-style multi-tenancy (`org_id`, `pro
 ## Usage
 
 ```ts
-import { MemorySchema, type Memory } from '@kybernesisai/arcana-contracts/memory';
+import { MemorySchema, type Memory } from '@kybernesis/arcana-contracts/memory';
 
 const memory: Memory = MemorySchema.parse(unknownInput);
 ```
 
-Granular subpath imports (`/memory`, `/entity`, `/edge`, ...) are tree-shakable. The root entry point (`@kybernesisai/arcana-contracts`) re-exports everything.
+Granular subpath imports (`/memory`, `/entity`, `/edge`, ...) are tree-shakable. The root entry point (`@kybernesis/arcana-contracts`) re-exports everything.
 
 ## Stability
 
