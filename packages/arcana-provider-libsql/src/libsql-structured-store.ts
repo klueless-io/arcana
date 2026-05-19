@@ -1,4 +1,6 @@
 import Database from 'libsql';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import type {
   StructuredStore,
   Memory,
@@ -176,6 +178,9 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
     // ── lifecycle ─────────────────────────────────────────────────────────
 
     connect: async () => {
+      if (dbPath !== ':memory:') {
+        mkdirSync(dirname(dbPath), { recursive: true });
+      }
       db = new Database(dbPath);
       db.exec(DDL);
     },

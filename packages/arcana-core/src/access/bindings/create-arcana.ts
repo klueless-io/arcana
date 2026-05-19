@@ -23,8 +23,15 @@ import { NotImplementedError } from '../../errors.js';
 export interface ArcanaOptions {
   /** Required: structured store (SQL-shaped CRUD + FTS + graph). */
   structured: StructuredStore;
-  /** Required: vector store for semantic retrieval. */
-  vector: VectorStore;
+  /**
+   * Optional: vector store for semantic retrieval. When omitted, all
+   * vector-dependent methods throw NotImplementedError — the same behaviour as
+   * when a real store is injected but the read methods are still stubbed.
+   * Pass undefined (or omit) when the vector backend is unavailable; do NOT
+   * pass a store whose connect() already failed, as that produces misleading
+   * downstream errors.
+   */
+  vector?: VectorStore;
   /** Required: embedding provider. */
   embed: EmbeddingProvider;
   /** Required: LLM provider for extraction, tagging, summarisation. */
@@ -65,6 +72,27 @@ export interface Arcana {
   command: CommandApi;
   providers: Readonly<ArcanaOptions>;
   logger: Logger;
+}
+
+/**
+ * No-op VectorStore fallback used when the caller does not inject one (or
+ * when vector connect failed and the caller wants to degrade gracefully).
+ * Every method throws NotImplementedError so consumers get a clear message
+ * instead of a cryptic "connect() must be called first" from a broken instance.
+ */
+function createMissingVectorStore(): VectorStore {
+  const fail = (method: string): never => {
+    throw new NotImplementedError(
+      `arcana-core: VectorStore.${method} called but no vector store was injected into createArcana()`,
+    );
+  };
+  return {
+    connect: async () => fail('connect'),
+    disconnect: async () => fail('disconnect'),
+    upsert: async () => fail('upsert'),
+    query: () => fail('query'),
+    delete: async () => fail('delete'),
+  };
 }
 
 /**
@@ -114,10 +142,11 @@ export function createArcana(opts: ArcanaOptions): Arcana {
   const logger = opts.logger ?? createNoopLogger();
   const scheduler = opts.scheduler ?? createMissingScheduler();
   const queue = opts.queue ?? createMissingQueue();
+  const vector = opts.vector ?? createMissingVectorStore();
 
   const ingest = createIngest({
     structured: opts.structured,
-    vector: opts.vector,
+    vector,
     embed: opts.embed,
     llm: opts.llm,
     logger,
@@ -125,7 +154,7 @@ export function createArcana(opts: ArcanaOptions): Arcana {
 
   const retrieve = createRetrieve({
     structured: opts.structured,
-    vector: opts.vector,
+    vector,
     embed: opts.embed,
     reranker: opts.reranker,
     logger,
@@ -133,7 +162,7 @@ export function createArcana(opts: ArcanaOptions): Arcana {
 
   const maintain = createMaintain({
     structured: opts.structured,
-    vector: opts.vector,
+    vector,
     embed: opts.embed,
     llm: opts.llm,
     scheduler,
@@ -148,7 +177,7 @@ export function createArcana(opts: ArcanaOptions): Arcana {
 
   const command = createCommand({
     structured: opts.structured,
-    vector: opts.vector,
+    vector,
     logger,
   });
 

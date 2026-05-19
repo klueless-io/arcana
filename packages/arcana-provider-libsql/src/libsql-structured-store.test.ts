@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import type { Memory, Entity, Fact, Contradiction, Edge, Insight, EntityProfile, AgentSelf, Chunk } from '@kybernesis/arcana-contracts';
 import { createLibsqlStructuredStore } from './libsql-structured-store.js';
 
@@ -52,6 +55,15 @@ describe('LibsqlStructuredStore (in-memory SQLite)', () => {
   it('throws when not connected', async () => {
     const cold = createLibsqlStructuredStore(':memory:');
     await expect(cold.getMemory('x')).rejects.toThrow('not connected');
+  });
+
+  it('connect() creates missing parent directories for file-based paths', async () => {
+    const base = mkdtempSync(join(tmpdir(), 'arcana-test-'));
+    const dbPath = join(base, 'nested', 'deep', 'arcana.db');
+    const fileStore = createLibsqlStructuredStore(dbPath);
+    await expect(fileStore.connect()).resolves.not.toThrow();
+    await fileStore.disconnect();
+    rmSync(base, { recursive: true, force: true });
   });
 
   // ── Memory ────────────────────────────────────────────────────────────────

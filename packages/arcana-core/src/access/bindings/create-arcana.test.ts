@@ -149,6 +149,13 @@ describe('createArcana', () => {
     expect(() => arcana.logger.error('x')).not.toThrow();
   });
 
+  it('vector is optional — omitting it still constructs a valid Arcana instance', () => {
+    const { vector: _v, ...noVector } = makeFakes();
+    const arcana = createArcana(noVector);
+    expect(arcana.retrieve).toBeDefined();
+    expect(arcana.providers.vector).toBeUndefined();
+  });
+
   it('scheduler fallback throws NotImplementedError when used without injection', async () => {
     const arcana = createArcana(makeFakes());
     // Reach the scheduler through providers — when omitted, .providers.scheduler is undefined;
