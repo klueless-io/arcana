@@ -18,6 +18,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `ingest.storeMemory` defaults `isLatest: true` (new memories are latest by definition).
 - Implemented in the testkit fake (`createFakeStructuredStore`) with the same throw-on-unknown-id semantics as `markFactSuperseded`.
 
+### Added — ProfileEntry schema (ADR 007 §4)
+- `ProfileEntrySchema` — `{ value: string, factId?: string, confidence?: number, recordedAt?: string }`. New provenance-aware entry type for profile arrays.
+- `EntityProfileSchema.staticFacts` changed from `string[]` to `ProfileEntry[]`. Adds optional provenance (which fact established it), confidence score, and ISO timestamp per entry.
+- Flat-string callers (KyberBot) migrate trivially: wrap each string in `{ value }`. Brain's structured arrays project naturally onto this shape.
+- 5 new tests: value-only round-trip, fully-populated round-trip, empty value rejection, out-of-range confidence rejection, strict-mode unknown-key rejection. Plus regression test confirming raw strings in staticFacts now throw. ([ADR 007](./docs/decisions/007-shape-thesis-portable-rules-not-records.md) §4)
+
 ### Added — `@kybernesisai/arcana-core`
 - `ingest.storeMemory(input)` — canonical row write with defaults + djb2 contentHash + UUID id ([commit 1f6a7c4](./))
 - `command.upsertEntity(entity)` — persist an Entity via the structured store
