@@ -20,8 +20,8 @@
       "status": "complete",
       "tasks": ["T4", "T5"],
       "v0_1_progress": {
-        "T4_data_model_schemas": "complete (22 tests)",
-        "T5_interfaces_envelopes": "complete (15 additional tests; total 37)"
+        "T4_data_model_schemas": "complete (22 tests at v0.1; grown via ADRs 004–007 to include ProfileEntry, MemoryStatus, isLatest/supersededBy on Memory + Fact, Contradiction.rationale)",
+        "T5_interfaces_envelopes": "complete (15 additional tests at v0.1; StructuredStore grown via ADRs 002/005/006/007: +deleteEntity, +updateMemory, +markFactSuperseded, +markMemorySuperseded)"
       },
       "v0_1_status": "complete"
     },
@@ -59,10 +59,11 @@
     {
       "id": "arcana-providers-libsql",
       "npm_name": "@kybernesisai/arcana-providers-libsql",
-      "role": "Reference StructuredStore impl — real libsql connect + one round-trip, other methods throw NotImplementedError",
-      "depends_on": ["arcana-contracts", "arcana-testkit"],
-      "status": "not_started",
-      "tasks": ["T10"]
+      "role": "Full StructuredStore implementation over libsql (same sync SQLite binding as KyberBot). All 9 entity types. In-memory integration tests. Unblocks KyberBot wiring initArcana().",
+      "depends_on": ["arcana-contracts", "libsql@0.5.x"],
+      "status": "scaffolded",
+      "tasks": ["T10"],
+      "started": "2026-05-19"
     }
   ]
 }
