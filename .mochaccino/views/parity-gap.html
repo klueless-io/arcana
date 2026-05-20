@@ -228,5 +228,68 @@
 </table>
 </div>
 
+<script>
+(function () {
+  // add header checkbox column
+  const headRow = document.querySelector('table thead tr');
+  const thCheck = document.createElement('th');
+  thCheck.style.cssText = 'width:36px;background:var(--bg-secondary);';
+  headRow.insertBefore(thCheck, headRow.firstChild);
+
+  // add checkbox to data rows; add blank td to section/totals rows
+  document.querySelectorAll('tbody tr').forEach(row => {
+    const td = document.createElement('td');
+    if (row.classList.contains('sec-row') || row.classList.contains('totals-row')) {
+      row.insertBefore(td, row.firstChild);
+      return;
+    }
+    td.style.cssText = 'padding:8px 12px;background:var(--bg-secondary);text-align:center;vertical-align:middle;';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'row-check';
+    td.appendChild(cb);
+    row.insertBefore(td, row.firstChild);
+    cb.addEventListener('change', updateBar);
+  });
+
+  // inject copy bar
+  const bar = document.createElement('div');
+  bar.id = 'copy-bar';
+  bar.innerHTML = '<span id="copy-count"></span><button id="copy-btn">Copy context</button><span id="copy-flash"></span><button id="copy-clear">Clear</button>';
+  document.body.appendChild(bar);
+
+  function updateBar() {
+    const n = document.querySelectorAll('.row-check:checked').length;
+    bar.classList.toggle('visible', n > 0);
+    document.getElementById('copy-count').textContent = n + (n === 1 ? ' item' : ' items') + ' selected';
+    document.getElementById('copy-flash').textContent = '';
+  }
+
+  document.getElementById('copy-btn').addEventListener('click', () => {
+    const lines = ['ARCANA PARITY GAP — context', '',
+                   'Feature                        Arcana          KyberBot        Brain           KyberAgent', ''];
+    document.querySelectorAll('tbody tr:not(.sec-row):not(.totals-row)').forEach(row => {
+      const cb = row.querySelector('.row-check');
+      if (!cb || !cb.checked) return;
+      const cells = [...row.querySelectorAll('td')].slice(1); // skip checkbox td
+      const feature = cells[0]?.querySelector('.area-name')?.textContent.trim() || '';
+      const cols = cells.slice(1).map(td => {
+        const chip = td.querySelector('.chip');
+        return (chip ? chip.textContent.trim() : '—').replace(/[✓✗◐○—]/g,'').trim();
+      });
+      lines.push(feature.padEnd(31) + cols.map(c => c.padEnd(16)).join(''));
+    });
+    navigator.clipboard.writeText(lines.join('\n'));
+    const flash = document.getElementById('copy-flash');
+    flash.textContent = '✓ copied';
+    setTimeout(() => { flash.textContent = ''; }, 2000);
+  });
+
+  document.getElementById('copy-clear').addEventListener('click', () => {
+    document.querySelectorAll('.row-check').forEach(cb => cb.checked = false);
+    updateBar();
+  });
+})();
+</script>
 </body>
 </html>

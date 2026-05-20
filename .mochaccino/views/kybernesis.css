@@ -229,3 +229,79 @@ code {
   color: var(--fg-secondary);
   font-weight: 500;
 }
+
+/* ── Clipboard copy feature ──────────────────────────────────────────────────
+   Shared across kernel-methods, parity-gap, provider-landscape.
+   JS in each page handles wiring; this CSS handles appearance.
+   ─────────────────────────────────────────────────────────────────────────── */
+.row-check {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid var(--border-color-hover);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  background: var(--bg-primary);
+  margin: 0;
+  vertical-align: middle;
+}
+.row-check:hover { border-color: var(--accent-emerald); }
+.row-check:checked { background: var(--accent-emerald); border-color: var(--accent-emerald); }
+.row-check:checked::after {
+  content: '';
+  position: absolute;
+  top: 1px; left: 3px;
+  width: 4px; height: 7px;
+  border: 1.5px solid white;
+  border-top: none; border-left: none;
+  transform: rotate(45deg);
+}
+
+/* wrapper for row + checkbox (flex layouts) */
+.method-wrap, .impl-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1px;
+}
+.method-wrap .method,
+.impl-wrap .impl { flex: 1; margin-bottom: 0; }
+
+/* floating copy bar */
+#copy-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  align-items: center;
+  gap: 16px;
+  background: var(--fg-primary);
+  color: var(--bg-primary);
+  padding: 10px 20px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+  white-space: nowrap;
+}
+#copy-bar.visible { display: flex; }
+#copy-count { color: var(--bg-secondary); }
+#copy-bar button {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 4px 12px;
+  border: 1px solid;
+  outline: none;
+}
+#copy-btn { background: var(--accent-emerald); color: white; border-color: var(--accent-emerald); }
+#copy-btn:hover { opacity: 0.85; }
+#copy-clear { background: transparent; color: var(--bg-primary); border-color: rgba(0,0,0,0.2); }
+#copy-flash { color: var(--accent-emerald); font-size: 10px; min-width: 50px; }

@@ -182,5 +182,64 @@
   </div>
 </div>
 
+<script>
+(function () {
+  // wrap every method row with a checkbox
+  document.querySelectorAll('.method').forEach(method => {
+    const wrap = document.createElement('div');
+    wrap.className = 'method-wrap';
+    method.parentNode.insertBefore(wrap, method);
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'row-check';
+    wrap.appendChild(cb);
+    wrap.appendChild(method);
+    cb.addEventListener('change', updateBar);
+  });
+
+  // inject copy bar
+  const bar = document.createElement('div');
+  bar.id = 'copy-bar';
+  bar.innerHTML = '<span id="copy-count"></span><button id="copy-btn">Copy context</button><span id="copy-flash"></span><button id="copy-clear">Clear</button>';
+  document.body.appendChild(bar);
+
+  function updateBar() {
+    const n = document.querySelectorAll('.row-check:checked').length;
+    bar.classList.toggle('visible', n > 0);
+    document.getElementById('copy-count').textContent = n + (n === 1 ? ' item' : ' items') + ' selected';
+    document.getElementById('copy-flash').textContent = '';
+  }
+
+  document.getElementById('copy-btn').addEventListener('click', () => {
+    const lines = ['ARCANA KERNEL METHODS — context', ''];
+    let currentZone = null;
+    document.querySelectorAll('.method-wrap').forEach(wrap => {
+      if (!wrap.querySelector('.row-check').checked) return;
+      const method = wrap.querySelector('.method');
+      const zone = method.closest('.zone');
+      const zName = zone ? zone.querySelector('.zone-name').textContent.trim() : '—';
+      if (zName !== currentZone) {
+        if (currentZone !== null) lines.push('');
+        lines.push('zone: ' + zName);
+        currentZone = zName;
+      }
+      const name   = method.querySelector('.m-name').textContent.trim();
+      const status = method.querySelector('.m-status').textContent.trim();
+      const notes  = [...method.querySelectorAll('.driven,.note,.warn')]
+                       .map(e => e.textContent.trim()).filter(Boolean).join(' · ');
+      lines.push('  ' + name.padEnd(30) + status.padEnd(14) + (notes || ''));
+    });
+    navigator.clipboard.writeText(lines.join('\n'));
+    const flash = document.getElementById('copy-flash');
+    flash.textContent = '✓ copied';
+    setTimeout(() => { flash.textContent = ''; }, 2000);
+  });
+
+  document.getElementById('copy-clear').addEventListener('click', () => {
+    document.querySelectorAll('.row-check').forEach(cb => cb.checked = false);
+    updateBar();
+  });
+})();
+</script>
 </body>
 </html>

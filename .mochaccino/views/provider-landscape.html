@@ -230,5 +230,63 @@
   </div>
 </div>
 
+<script>
+(function () {
+  // wrap every provider impl with a checkbox
+  document.querySelectorAll('.impl').forEach(impl => {
+    const wrap = document.createElement('div');
+    wrap.className = 'impl-wrap';
+    impl.parentNode.insertBefore(wrap, impl);
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'row-check';
+    wrap.appendChild(cb);
+    wrap.appendChild(impl);
+    cb.addEventListener('change', updateBar);
+  });
+
+  // inject copy bar
+  const bar = document.createElement('div');
+  bar.id = 'copy-bar';
+  bar.innerHTML = '<span id="copy-count"></span><button id="copy-btn">Copy context</button><span id="copy-flash"></span><button id="copy-clear">Clear</button>';
+  document.body.appendChild(bar);
+
+  function updateBar() {
+    const n = document.querySelectorAll('.row-check:checked').length;
+    bar.classList.toggle('visible', n > 0);
+    document.getElementById('copy-count').textContent = n + (n === 1 ? ' item' : ' items') + ' selected';
+    document.getElementById('copy-flash').textContent = '';
+  }
+
+  document.getElementById('copy-btn').addEventListener('click', () => {
+    const lines = ['ARCANA PROVIDER LANDSCAPE — context', ''];
+    let currentIface = null;
+    document.querySelectorAll('.impl-wrap').forEach(wrap => {
+      if (!wrap.querySelector('.row-check').checked) return;
+      const impl = wrap.querySelector('.impl');
+      const col = impl.closest('.iface-col');
+      const ifaceName = col ? col.querySelector('.iface-name').textContent.trim() : '—';
+      if (ifaceName !== currentIface) {
+        if (currentIface !== null) lines.push('');
+        lines.push(ifaceName + ':');
+        currentIface = ifaceName;
+      }
+      const name   = impl.querySelector('.impl-name')?.textContent.trim() || '';
+      const badges = [...impl.querySelectorAll('.impl-badge')].map(b => b.textContent.trim()).join(', ');
+      const detail = impl.querySelector('.impl-detail')?.textContent.trim() || '';
+      lines.push('  [' + badges + '] ' + name + ' — ' + detail);
+    });
+    navigator.clipboard.writeText(lines.join('\n'));
+    const flash = document.getElementById('copy-flash');
+    flash.textContent = '✓ copied';
+    setTimeout(() => { flash.textContent = ''; }, 2000);
+  });
+
+  document.getElementById('copy-clear').addEventListener('click', () => {
+    document.querySelectorAll('.row-check').forEach(cb => cb.checked = false);
+    updateBar();
+  });
+})();
+</script>
 </body>
 </html>
