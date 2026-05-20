@@ -90,19 +90,13 @@ describe('createArcana', () => {
   });
 
   it('still-stubbed zone methods throw NotImplementedError', async () => {
-    // storeMemory has been implemented (v0.x); other zones remain stubs.
-    // See packages/arcana-core/src/ingest/index.test.ts for storeMemory tests.
+    // storeMemory + hybridSearch have been implemented (v0.x); sleep
+    // pipeline + ingestDocument remain stubs.
+    // See packages/arcana-core/src/{ingest,retrieve}/ for the live tests.
     const arcana = createArcana(makeFakes());
-    await expect(
-      arcana.retrieve.hybridSearch({ query: 'x' }),
-    ).rejects.toBeInstanceOf(NotImplementedError);
     await expect(arcana.maintain.runSleepPipeline()).rejects.toBeInstanceOf(
       NotImplementedError,
     );
-    // Note: query.queryFacts is now implemented — see access/query/index.test.ts
-    // Note: command.upsertEntity, deleteEntity, linkNodes, updateMemory, pin,
-    // moveToTier are now implemented (see access/command/index.test.ts).
-    // They no longer throw.
     await expect(
       arcana.ingest.ingestDocument({ format: 'markdown', content: '# x' }),
     ).rejects.toBeInstanceOf(NotImplementedError);

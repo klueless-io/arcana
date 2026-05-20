@@ -14,6 +14,9 @@ import type {
   AgentSelf,
   NodeRef,
   MemoryFilter,
+  FulltextSearchOpts,
+  FulltextMatch,
+  FulltextField,
 } from '@kybernesis/arcana-contracts';
 import { DDL } from './schema.js';
 
@@ -43,6 +46,51 @@ function assertConnected(
       'LibsqlStructuredStore: not connected — call connect() first',
     );
   }
+}
+
+// ─── fulltext helpers ────────────────────────────────────────────────────────
+
+const FTS_FIELDS: readonly FulltextField[] = ['title', 'summary', 'content', 'tags'] as const;
+
+/**
+ * Build an FTS5 MATCH query from a natural-language string. Words are
+ * lowercased, double-quote-escaped, and OR'd together. Returns null when
+ * the input has no usable tokens.
+ */
+function buildFtsQuery(query: string): { ftsQuery: string; tokens: string[] } | null {
+  const tokens = query
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w) => w.replace(/[^\p{L}\p{N}]/gu, ''))
+    .filter((w) => w.length > 0);
+  if (tokens.length === 0) return null;
+  const ftsQuery = tokens.map((w) => `"${w.replace(/"/g, '""')}"`).join(' OR ');
+  return { ftsQuery, tokens };
+}
+
+/**
+ * FTS5 `rank` is a real number; lower (more negative) = better match.
+ * Normalize to 0..1 where higher = better, monotonic in |rank|.
+ */
+function normalizeRank(rank: number): number {
+  return 1 / (1 + Math.abs(rank));
+}
+
+/**
+ * Cheaply detect which fields contain at least one query token. Avoids
+ * an extra per-column FTS query.
+ */
+function detectMatchedFields(
+  row: Row,
+  tokens: string[],
+  selected: readonly FulltextField[],
+): FulltextField[] {
+  const matched: FulltextField[] = [];
+  for (const field of selected) {
+    const haystack = String(row[field] ?? '').toLowerCase();
+    if (tokens.some((t) => haystack.includes(t))) matched.push(field);
+  }
+  return matched;
 }
 
 // ─── row mappers ─────────────────────────────────────────────────────────────
@@ -394,15 +442,23 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
       });
     },
 
-    getFactsForEntity: async (entity: string, attribute?: string) => {
+    getFactsForEntity: async (
+      entity: string,
+      attribute?: string,
+      asOf?: string,
+    ) => {
       assertConnected(db);
+      let sql = 'SELECT * FROM facts WHERE entity=?';
+      const params: unknown[] = [entity];
       if (attribute !== undefined) {
-        const rows = db.prepare(
-          'SELECT * FROM facts WHERE entity=? AND attribute=?',
-        ).all(entity, attribute) as Row[];
-        return rows.map(rowToFact);
+        sql += ' AND attribute=?';
+        params.push(attribute);
       }
-      const rows = db.prepare('SELECT * FROM facts WHERE entity=?').all(entity) as Row[];
+      if (asOf !== undefined) {
+        sql += ' AND (expires_at IS NULL OR expires_at > ?)';
+        params.push(asOf);
+      }
+      const rows = db.prepare(sql).all(...params) as Row[];
       return rows.map(rowToFact);
     },
 
@@ -414,6 +470,64 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
       if ((info as { changes: number }).changes === 0) {
         throw new Error(`LibsqlStructuredStore: markFactSuperseded — unknown id ${oldFactId}`);
       }
+    },
+
+    // ── Fulltext ──────────────────────────────────────────────────────────
+
+    searchFulltext: async (
+      query: string,
+      opts?: FulltextSearchOpts,
+    ): Promise<FulltextMatch[]> => {
+      assertConnected(db);
+      const built = buildFtsQuery(query);
+      if (!built) return [];
+      const { ftsQuery, tokens } = built;
+      const topK = opts?.topK ?? 50;
+      const selectedFields = (opts?.fields ?? FTS_FIELDS) as readonly FulltextField[];
+
+      // Build a join against memories for tier + scope filters. FTS5
+      // matching stays purely on the virtual table.
+      const where: string[] = ['memories_fts MATCH ?'];
+      const params: unknown[] = [ftsQuery];
+      if (opts?.tier) {
+        where.push('m.tier = ?');
+        params.push(opts.tier);
+      }
+      const sql = `
+        SELECT f.memory_id AS memory_id,
+               f.title    AS title,
+               f.summary  AS summary,
+               f.content  AS content,
+               f.tags     AS tags,
+               f.rank     AS rank,
+               m.scopes   AS scopes
+        FROM memories_fts f
+        JOIN memories m ON m.id = f.memory_id
+        WHERE ${where.join(' AND ')}
+        ORDER BY f.rank
+        LIMIT ?
+      `;
+      params.push(topK);
+      const rows = db.prepare(sql).all(...params) as Row[];
+
+      // Scope filter (JSON comparison can't be pushed into SQL portably).
+      let filteredRows = rows;
+      if (opts?.scopes) {
+        const wanted = opts.scopes;
+        filteredRows = rows.filter((row) => {
+          if (!row.scopes) return false;
+          const ms = p<Record<string, unknown>>(row.scopes as string) ?? {};
+          if (wanted.org_id !== undefined && ms.org_id !== wanted.org_id) return false;
+          if (wanted.project_id !== undefined && ms.project_id !== wanted.project_id) return false;
+          return true;
+        });
+      }
+
+      return filteredRows.map<FulltextMatch>((row) => ({
+        memoryId: row.memory_id as string,
+        score: normalizeRank(row.rank as number),
+        matchedFields: detectMatchedFields(row, tokens, selectedFields),
+      }));
     },
 
     // ── Contradiction ─────────────────────────────────────────────────────

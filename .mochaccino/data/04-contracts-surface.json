@@ -1,11 +1,11 @@
 {
   "angle": "matrix",
   "title": "Arcana Contracts Surface",
-  "subtitle": "Every Zod schema and provider interface that v0.1.0 must ship",
+  "subtitle": "Every Zod schema and provider interface — v0.2.0 candidate",
   "purpose": "Tracks what's defined in @kybernesis/arcana-contracts. Source of truth is arcana-spec.md §10 in the brain. Status flips to 'complete' when the Zod schema validates sample data round-trips in a test.",
-  "generated": "2026-05-19",
+  "generated": "2026-05-20",
   "system": "arcana",
-  "milestone": "v0.1.0",
+  "milestone": "v0.2.0",
   "status_legend": [
     { "id": "not_started", "symbol": "○", "label": "Not started" },
     { "id": "drafted", "symbol": "◐", "label": "TS draft only" },
@@ -33,7 +33,7 @@
       "id": "provider_interfaces",
       "label": "Provider interfaces (TS)",
       "rows": [
-        { "name": "StructuredStore", "status": "complete", "test_file": "providers.test.ts", "evolution": ["v0.1 initial", "v0.x: +deleteEntity (ADR 002, 2026-05-18, driven by kyberbot module #2)", "v0.x: +updateMemory (ADR 005, 2026-05-18, Memory not append-only; unblocks pin/moveToTier and orphan-mirror fix)", "v0.x: +markFactSuperseded (ADR 006, 2026-05-18, driven by kyberbot module #11 supersede write-path)", "v0.x: +markMemorySuperseded (ADR 007 §3.2, 2026-05-19, memory-level supersession mirroring the fact-level pattern)"] },
+        { "name": "StructuredStore", "status": "complete", "test_file": "providers.test.ts", "evolution": ["v0.1 initial", "v0.x: +deleteEntity (ADR 002, 2026-05-18, driven by kyberbot module #2)", "v0.x: +updateMemory (ADR 005, 2026-05-18, Memory not append-only; unblocks pin/moveToTier and orphan-mirror fix)", "v0.x: +markFactSuperseded (ADR 006, 2026-05-18, driven by kyberbot module #11 supersede write-path)", "v0.x: +markMemorySuperseded (ADR 007 §3.2, 2026-05-19, memory-level supersession mirroring the fact-level pattern)", "v0.2.0: +searchFulltext (2026-05-20, FTS+hybrid sprint) — provider-owned full-text index with normalized 0..1 score and matchedFields; libsql uses FTS5 virtual table, future postgres uses tsvector", "v0.2.0: getFactsForEntity gained optional asOf: string ISO-8601 (2026-05-20) — bitemporal valid-time filter; backward compatible"] },
         { "name": "VectorStore", "status": "complete", "test_file": "providers.test.ts" },
         { "name": "EmbeddingProvider", "status": "complete", "test_file": "providers.test.ts" },
         { "name": "LLMProvider", "status": "complete", "test_file": "providers.test.ts" },
@@ -49,6 +49,15 @@
         { "name": "Logger", "status": "complete", "test_file": "logger.test.ts" },
         { "name": "QueryResult<T>", "status": "complete", "test_file": "query-result.test.ts" },
         { "name": "Scopes (ARP)", "status": "complete", "test_file": "scopes.test.ts" }
+      ]
+    },
+    {
+      "id": "fulltext_types",
+      "label": "Fulltext search types (v0.2.0 — new)",
+      "rows": [
+        { "name": "FulltextSearchOpts", "status": "complete", "test_file": "providers.test.ts", "note": "scopes/tier/topK/fields filtering at the index layer" },
+        { "name": "FulltextMatch", "status": "complete", "test_file": "providers.test.ts", "note": "{memoryId, score: 0..1, matchedFields: FulltextField[]}" },
+        { "name": "FulltextField", "status": "complete", "test_file": "providers.test.ts", "note": "type alias: 'title' | 'summary' | 'content' | 'tags'" }
       ]
     }
   ]

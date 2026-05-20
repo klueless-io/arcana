@@ -82,6 +82,59 @@ describe('query.queryFacts', () => {
     expect(result.data_age_ms).toBe(0);
     expect(result.stale).toBe(false);
   });
+
+  it('excludes expired facts when asOf is supplied', async () => {
+    const expiredFact: Fact = {
+      id: 'f_exp',
+      fact: 'David used to work at OldCo',
+      entity: 'David',
+      confidence: 0.7,
+      sourceType: 'chat',
+      createdAt: '2024-01-01T00:00:00.000Z',
+      expiresAt: '2025-01-01T00:00:00.000Z',
+      isLatest: true,
+    };
+    await structured.storeFact(expiredFact);
+
+    const asOf = '2026-06-01T00:00:00.000Z';
+    const result = await api.queryFacts('David', undefined, asOf);
+    const ids = result.data.map((f) => f.id).sort();
+    expect(ids).toEqual(['f_1', 'f_2']);
+    expect(ids).not.toContain('f_exp');
+  });
+
+  it('keeps facts whose expiresAt is in the future relative to asOf', async () => {
+    const futureFact: Fact = {
+      id: 'f_future',
+      fact: 'David has a current contract',
+      entity: 'David',
+      confidence: 0.95,
+      sourceType: 'chat',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      expiresAt: '2027-01-01T00:00:00.000Z',
+      isLatest: true,
+    };
+    await structured.storeFact(futureFact);
+
+    const asOf = '2026-06-01T00:00:00.000Z';
+    const result = await api.queryFacts('David', undefined, asOf);
+    expect(result.data.map((f) => f.id)).toContain('f_future');
+  });
+
+  it('omitting asOf returns all facts including expired ones (backward compat)', async () => {
+    await structured.storeFact({
+      id: 'f_expired',
+      fact: 'old fact',
+      entity: 'David',
+      confidence: 0.5,
+      sourceType: 'chat',
+      createdAt: '2024-01-01T00:00:00.000Z',
+      expiresAt: '2025-01-01T00:00:00.000Z',
+      isLatest: true,
+    });
+    const result = await api.queryFacts('David');
+    expect(result.data.map((f) => f.id).sort()).toEqual(['f_1', 'f_2', 'f_expired']);
+  });
 });
 
 describe('still-stubbed query methods', () => {

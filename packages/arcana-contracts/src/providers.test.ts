@@ -14,6 +14,7 @@ import type {
   RerankerProvider,
   Scheduler,
   JobQueue,
+  FulltextMatch,
 } from './providers.js';
 import type { Memory } from './memory.js';
 
@@ -48,6 +49,36 @@ describe('Provider interfaces', () => {
     expect(await fake.getMemory('mem_1')).toEqual(memory);
     expect(await fake.getMemory('missing')).toBeNull();
     await fake.disconnect();
+  });
+
+  it('StructuredStore.searchFulltext shape is implementable', async () => {
+    const fake: Pick<StructuredStore, 'searchFulltext'> = {
+      searchFulltext: async (query, opts) => {
+        if (!query) return [];
+        const match: FulltextMatch = {
+          memoryId: 'mem_1',
+          score: 0.8,
+          matchedFields: opts?.fields ?? ['title', 'content'],
+        };
+        return [match];
+      },
+    };
+    const r = await fake.searchFulltext('hello', { topK: 5 });
+    expect(r[0]?.memoryId).toBe('mem_1');
+    expect(r[0]?.score).toBeGreaterThan(0);
+    expect(r[0]?.matchedFields).toContain('title');
+  });
+
+  it('StructuredStore.getFactsForEntity accepts optional asOf', async () => {
+    const fake: Pick<StructuredStore, 'getFactsForEntity'> = {
+      getFactsForEntity: async (entity, _attribute, asOf) => {
+        // Compile-check: asOf is string | undefined
+        const stamp: string | undefined = asOf;
+        return stamp ? [] : [];
+      },
+    };
+    expect(await fake.getFactsForEntity('e1')).toEqual([]);
+    expect(await fake.getFactsForEntity('e1', undefined, '2026-01-01T00:00:00.000Z')).toEqual([]);
   });
 
   it('VectorStore can be implemented', async () => {

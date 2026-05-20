@@ -298,4 +298,107 @@ describe('LibsqlStructuredStore (in-memory SQLite)', () => {
     await store.updateAgentSelf(self);
     expect(await store.getAgentSelf()).toEqual(self);
   });
+
+  // ── searchFulltext (FTS5) ─────────────────────────────────────────────────
+
+  it('searchFulltext returns matches ranked by relevance', async () => {
+    await store.storeMemory({ ...baseMemory(), id: 'mem_a', title: 'Anthropic releases Claude', content: 'machine learning company' });
+    await store.storeMemory({ ...baseMemory(), id: 'mem_b', title: 'Unrelated topic', content: 'something about gardening' });
+    await store.storeMemory({ ...baseMemory(), id: 'mem_c', title: 'Anthropic and Claude', content: 'AI assistant by Anthropic' });
+
+    const matches = await store.searchFulltext('anthropic claude');
+    expect(matches.length).toBeGreaterThanOrEqual(2);
+    const ids = matches.map((m) => m.memoryId);
+    expect(ids).toContain('mem_a');
+    expect(ids).toContain('mem_c');
+    expect(ids).not.toContain('mem_b');
+    // Scores normalized to 0..1
+    for (const m of matches) {
+      expect(m.score).toBeGreaterThan(0);
+      expect(m.score).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('searchFulltext reports matchedFields per result', async () => {
+    await store.storeMemory({ ...baseMemory(), id: 'mem_title', title: 'kybernesis architecture', content: 'unrelated body' });
+    await store.storeMemory({ ...baseMemory(), id: 'mem_content', title: 'unrelated header', content: 'kybernesis everywhere in the body text' });
+
+    const titleMatch = (await store.searchFulltext('kybernesis')).find((m) => m.memoryId === 'mem_title');
+    const contentMatch = (await store.searchFulltext('kybernesis')).find((m) => m.memoryId === 'mem_content');
+    expect(titleMatch?.matchedFields).toContain('title');
+    expect(titleMatch?.matchedFields).not.toContain('content');
+    expect(contentMatch?.matchedFields).toContain('content');
+    expect(contentMatch?.matchedFields).not.toContain('title');
+  });
+
+  it('searchFulltext filters by tier', async () => {
+    await store.storeMemory({ ...baseMemory(), id: 'mem_hot', title: 'arcana fts', tier: 'hot' });
+    await store.storeMemory({ ...baseMemory(), id: 'mem_cold', title: 'arcana fts', tier: 'archive' });
+
+    const hot = await store.searchFulltext('arcana fts', { tier: 'hot' });
+    expect(hot.map((m) => m.memoryId)).toEqual(['mem_hot']);
+  });
+
+  it('searchFulltext filters by scopes', async () => {
+    await store.storeMemory({
+      ...baseMemory(), id: 'mem_org_a', title: 'gizmo widget',
+      scopes: { org_id: 'org_a' },
+    });
+    await store.storeMemory({
+      ...baseMemory(), id: 'mem_org_b', title: 'gizmo widget',
+      scopes: { org_id: 'org_b' },
+    });
+
+    const orgA = await store.searchFulltext('gizmo', { scopes: { org_id: 'org_a' } });
+    expect(orgA.map((m) => m.memoryId)).toEqual(['mem_org_a']);
+  });
+
+  it('searchFulltext returns empty for whitespace-only query', async () => {
+    await store.storeMemory({ ...baseMemory(), id: 'mem_x', title: 'something' });
+    expect(await store.searchFulltext('')).toEqual([]);
+    expect(await store.searchFulltext('   ')).toEqual([]);
+  });
+
+  it('searchFulltext respects topK', async () => {
+    for (let i = 0; i < 5; i++) {
+      await store.storeMemory({ ...baseMemory(), id: `mem_t${i}`, title: `widget number ${i}`, content: 'widget body' });
+    }
+    const limited = await store.searchFulltext('widget', { topK: 2 });
+    expect(limited.length).toBe(2);
+  });
+
+  it('searchFulltext index stays in sync with updates and deletes', async () => {
+    await store.storeMemory({ ...baseMemory(), id: 'mem_sync', title: 'pebble' });
+    expect((await store.searchFulltext('pebble')).map((m) => m.memoryId)).toContain('mem_sync');
+
+    await store.updateMemory('mem_sync', { title: 'cobblestone' });
+    expect((await store.searchFulltext('pebble')).map((m) => m.memoryId)).not.toContain('mem_sync');
+    expect((await store.searchFulltext('cobblestone')).map((m) => m.memoryId)).toContain('mem_sync');
+
+    await store.deleteMemory('mem_sync');
+    expect((await store.searchFulltext('cobblestone')).map((m) => m.memoryId)).not.toContain('mem_sync');
+  });
+
+  // ── getFactsForEntity asOf filter ─────────────────────────────────────────
+
+  it('getFactsForEntity filters out expired facts when asOf is supplied', async () => {
+    await store.upsertEntity(baseEntity());
+    await store.storeFact({
+      ...baseFact(), id: 'f_active', fact: 'active fact', expiresAt: '2027-01-01T00:00:00.000Z',
+    });
+    await store.storeFact({
+      ...baseFact(), id: 'f_expired', fact: 'expired fact', expiresAt: '2025-01-01T00:00:00.000Z',
+    });
+    await store.storeFact({
+      ...baseFact(), id: 'f_perpetual', fact: 'perpetual fact',
+    });
+
+    const asOfMid = '2026-06-01T00:00:00.000Z';
+    const ids = (await store.getFactsForEntity('ent_1', undefined, asOfMid)).map((f) => f.id).sort();
+    expect(ids).toEqual(['f_active', 'f_perpetual']);
+
+    // No asOf preserves legacy behavior — returns everything
+    const all = (await store.getFactsForEntity('ent_1')).map((f) => f.id).sort();
+    expect(all).toEqual(['f_active', 'f_expired', 'f_perpetual']);
+  });
 });

@@ -73,7 +73,19 @@ export interface StructuredStore {
 
   // Fact
   storeFact(fact: Fact): Promise<void>;
-  getFactsForEntity(entity: string, attribute?: string): Promise<Fact[]>;
+  /**
+   * Look up facts for an entity. Optionally narrow by attribute.
+   *
+   * When `asOf` (ISO 8601) is supplied, only facts that were valid at
+   * that instant are returned: facts with `expiresAt` ≤ `asOf` are
+   * excluded. This is bitemporal valid-time filtering. Omitting `asOf`
+   * returns all facts regardless of expiry (current behavior preserved).
+   */
+  getFactsForEntity(
+    entity: string,
+    attribute?: string,
+    asOf?: string,
+  ): Promise<Fact[]>;
   /**
    * Mark a fact as superseded by another. Updates `isLatest=false` and
    * `supersededBy=newFactId` on the old fact. The new fact must already
@@ -81,6 +93,20 @@ export interface StructuredStore {
    * See ADR 006.
    */
   markFactSuperseded(oldFactId: string, newFactId: string): Promise<void>;
+
+  // Full-text search
+  /**
+   * Full-text search across memory content. Provider-specific index
+   * (FTS5 for libsql, tsvector for Postgres). Returns memory IDs with
+   * a normalized 0..1 relevance score and the list of fields that
+   * matched. Caller (kernel) is responsible for enriching ids to full
+   * Memory objects.
+   *
+   * Scope/tier filtering happens at this layer because the index can
+   * filter rows before scoring. `fields` defaults to all indexed
+   * fields when omitted.
+   */
+  searchFulltext(query: string, opts?: FulltextSearchOpts): Promise<FulltextMatch[]>;
 
   // Contradiction
   storeContradiction(contradiction: Contradiction): Promise<void>;
@@ -104,6 +130,23 @@ export interface MemoryFilter {
   scopes?: Scopes;
   isPinned?: boolean;
   limit?: number;
+}
+
+/** Indexed fields available for fulltext search. */
+export type FulltextField = 'title' | 'summary' | 'content' | 'tags';
+
+export interface FulltextSearchOpts {
+  scopes?: Scopes;
+  tier?: Tier;
+  topK?: number;
+  fields?: FulltextField[];
+}
+
+export interface FulltextMatch {
+  memoryId: string;
+  /** Normalized 0..1 — higher is more relevant. */
+  score: number;
+  matchedFields: FulltextField[];
 }
 
 /**

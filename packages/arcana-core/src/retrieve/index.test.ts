@@ -1,8 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createNoopLogger } from '@kybernesis/arcana-contracts';
+import {
+  createNoopLogger,
+  type VectorStore,
+  type EmbeddingProvider,
+  type RerankerProvider,
+  type Memory,
+} from '@kybernesis/arcana-contracts';
 import { createFakeStructuredStore } from '@kybernesis/arcana-testkit/fakes';
 import { createRetrieve, type RetrieveDeps } from './index.js';
-import { NotImplementedError } from '../errors.js';
 
 let structured: ReturnType<typeof createFakeStructuredStore>;
 let deps: RetrieveDeps;
@@ -225,12 +230,154 @@ describe('factRetrieval', () => {
 });
 
 // ---------------------------------------------------------------------------
-// hybridSearch still throws NotImplementedError
+// hybridSearch — RRF fusion across FTS + vector + graph channels
 // ---------------------------------------------------------------------------
 
+const baseMemory = (overrides: Partial<Memory>): Memory => ({
+  id: 'mem',
+  title: '',
+  summary: '',
+  content: '',
+  tags: [],
+  priority: 0.5,
+  tier: 'warm',
+  decayScore: 0,
+  accessCount: 0,
+  isPinned: false,
+  contentHash: 'h',
+  source: 'cli',
+  status: 'active',
+  isLatest: true,
+  ...overrides,
+});
+
+function makeVector(matches: Array<{ id: string; memoryId: string; score: number }> = []): VectorStore {
+  return {
+    connect: async () => {},
+    disconnect: async () => {},
+    upsert: async () => {},
+    query: async () => matches.map((m) => ({ id: m.id, score: m.score, metadata: { memoryId: m.memoryId } })),
+    delete: async () => {},
+  };
+}
+
+function makeEmbed(): EmbeddingProvider {
+  return {
+    model: 'fake',
+    dimensions: 4,
+    embed: async () => [0.1, 0.2, 0.3, 0.4],
+    embedBatch: async (texts) => texts.map(() => [0.1, 0.2, 0.3, 0.4]),
+  };
+}
+
 describe('hybridSearch', () => {
-  it('still throws NotImplementedError', async () => {
-    const api = createRetrieve(deps);
-    await expect(api.hybridSearch({ query: 'x' })).rejects.toThrow(NotImplementedError);
+  it('returns empty array when no channels match', async () => {
+    const api = createRetrieve({ ...deps, vector: makeVector(), embed: makeEmbed() });
+    const result = await api.hybridSearch({ query: 'nothing-matches' });
+    expect(result.data).toEqual([]);
+  });
+
+  it('keyword-only match flows through the keyword channel', async () => {
+    await structured.storeMemory(baseMemory({ id: 'mem_kw', title: 'hybrid retrieval is great', content: 'kybernesis' }));
+    const api = createRetrieve({ ...deps, vector: makeVector(), embed: makeEmbed() });
+    const result = await api.hybridSearch({ query: 'kybernesis' });
+    expect(result.data.length).toBe(1);
+    expect(result.data[0]?.memory.id).toBe('mem_kw');
+    expect(result.data[0]?.matchType).toBe('keyword');
+    expect(result.data[0]?.keywordScore).toBeGreaterThan(0);
+    expect(result.data[0]?.semanticScore).toBe(0);
+    expect(result.data[0]?.graphScore).toBe(0);
+  });
+
+  it('memory appearing in both keyword and semantic channels is marked multi', async () => {
+    await structured.storeMemory(baseMemory({ id: 'mem_both', title: 'matched in both channels', content: 'kybernesis' }));
+    await structured.storeMemory(baseMemory({ id: 'mem_kw_only', title: 'kybernesis only matched in keyword', content: 'kybernesis' }));
+
+    const vector = makeVector([{ id: 'chunk_1', memoryId: 'mem_both', score: 0.9 }]);
+    const api = createRetrieve({ ...deps, vector, embed: makeEmbed() });
+
+    const result = await api.hybridSearch({ query: 'kybernesis' });
+    const both = result.data.find((r) => r.memory.id === 'mem_both');
+    const kwOnly = result.data.find((r) => r.memory.id === 'mem_kw_only');
+    expect(both?.matchType).toBe('multi');
+    expect(both?.keywordScore).toBeGreaterThan(0);
+    expect(both?.semanticScore).toBeGreaterThan(0);
+    expect(kwOnly?.matchType).toBe('keyword');
+    // Multi-channel item should outrank single-channel item under RRF
+    expect(both!.score).toBeGreaterThan(kwOnly!.score);
+  });
+
+  it('graph channel expands neighbors of seed memories', async () => {
+    await structured.storeMemory(baseMemory({ id: 'seed', title: 'sentinel anchor', content: 'sentinel' }));
+    await structured.storeMemory(baseMemory({ id: 'neighbor', title: 'unrelated', content: 'cabbage' }));
+    await structured.storeEdge({
+      id: 'edge_1',
+      from: { type: 'memory', id: 'seed' },
+      to: { type: 'memory', id: 'neighbor' },
+      relation: 'related',
+      confidence: 1.0,
+      sharedTags: [],
+      method: 'manual',
+      createdAt: new Date().toISOString(),
+    });
+
+    const api = createRetrieve({ ...deps, vector: makeVector(), embed: makeEmbed() });
+    const result = await api.hybridSearch({ query: 'sentinel', graphHops: 1 });
+    const ids = result.data.map((r) => r.memory.id);
+    expect(ids).toContain('seed');
+    expect(ids).toContain('neighbor');
+    const neighborResult = result.data.find((r) => r.memory.id === 'neighbor');
+    expect(neighborResult?.matchType).toBe('graph');
+    expect(neighborResult?.graphScore).toBeGreaterThan(0);
+  });
+
+  it('respects topK', async () => {
+    for (let i = 0; i < 5; i++) {
+      await structured.storeMemory(baseMemory({ id: `mem_${i}`, title: `widget ${i}`, content: 'widget' }));
+    }
+    const api = createRetrieve({ ...deps, vector: makeVector(), embed: makeEmbed() });
+    const result = await api.hybridSearch({ query: 'widget', topK: 2 });
+    expect(result.data.length).toBe(2);
+  });
+
+  it('survives a failing semantic channel (returns keyword-only)', async () => {
+    await structured.storeMemory(baseMemory({ id: 'mem_kw', title: 'kybernesis only', content: 'kybernesis' }));
+    const brokenVector: VectorStore = {
+      connect: async () => {},
+      disconnect: async () => {},
+      upsert: async () => {},
+      query: async () => { throw new Error('vector store offline'); },
+      delete: async () => {},
+    };
+    const api = createRetrieve({ ...deps, vector: brokenVector, embed: makeEmbed() });
+    const result = await api.hybridSearch({ query: 'kybernesis' });
+    expect(result.data.length).toBe(1);
+    expect(result.data[0]?.matchType).toBe('keyword');
+  });
+
+  it('calls reranker when rerank=true and a reranker is supplied', async () => {
+    await structured.storeMemory(baseMemory({ id: 'mem_a', title: 'kybernesis a', content: 'kybernesis' }));
+    await structured.storeMemory(baseMemory({ id: 'mem_b', title: 'kybernesis b', content: 'kybernesis' }));
+    let rerankCalled = false;
+    const reranker: RerankerProvider = {
+      model: 'fake-rerank',
+      rerank: async (_q, candidates) => {
+        rerankCalled = true;
+        return candidates.slice().reverse();
+      },
+    };
+    const api = createRetrieve({ ...deps, vector: makeVector(), embed: makeEmbed(), reranker });
+    const result = await api.hybridSearch({ query: 'kybernesis', rerank: true });
+    expect(rerankCalled).toBe(true);
+    expect(result.data.length).toBe(2);
+  });
+
+  it('wraps result in QueryResult envelope', async () => {
+    const api = createRetrieve({ ...deps, vector: makeVector(), embed: makeEmbed() });
+    const result = await api.hybridSearch({ query: 'anything' });
+    expect(result).toHaveProperty('data');
+    expect(result).toHaveProperty('generated_at');
+    expect(result).toHaveProperty('data_age_ms', 0);
+    expect(result).toHaveProperty('stale', false);
   });
 });

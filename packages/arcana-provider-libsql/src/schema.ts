@@ -101,4 +101,32 @@ CREATE TABLE IF NOT EXISTS agent_self (
   memory_blocks TEXT NOT NULL DEFAULT '[]',
   history TEXT NOT NULL DEFAULT '[]'
 );
+
+-- Fulltext index over memories. Mirrors title/summary/content/tags.
+-- memory_id is UNINDEXED so it doesn't participate in MATCH but can be
+-- selected and joined back to the canonical memories table for filters.
+CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
+  memory_id UNINDEXED,
+  title,
+  summary,
+  content,
+  tags,
+  tokenize = 'unicode61 remove_diacritics 2'
+);
+
+-- Sync triggers — keep memories_fts in lockstep with memories.
+CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN
+  INSERT INTO memories_fts (memory_id, title, summary, content, tags)
+  VALUES (new.id, new.title, new.summary, new.content, new.tags);
+END;
+
+CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN
+  DELETE FROM memories_fts WHERE memory_id = old.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE ON memories BEGIN
+  DELETE FROM memories_fts WHERE memory_id = old.id;
+  INSERT INTO memories_fts (memory_id, title, summary, content, tags)
+  VALUES (new.id, new.title, new.summary, new.content, new.tags);
+END;
 `;

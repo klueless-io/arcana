@@ -1,8 +1,8 @@
 {
   "angle": "data-flow",
   "title": "Arcana Publish Pipeline",
-  "subtitle": "From commit to npm \u2014 v0.1.0 partial; v0.1.1 is the correct first full publish",
-  "purpose": "Shows the publish path for v0.1.x. v0.1.0 was a partial attempt using npm publish (workspace:* deps not rewritten; arcana-provider-libsql missed). v0.1.1 corrects this using pnpm publish -r. NOTE: 5 packages in v0.1.1 (arcana-provider-sqlite-vec added).",
+  "subtitle": "From commit to npm \u2014 v0.1.0 partial; v0.1.1 fixed; v0.2.0 ships FTS+hybrid",
+  "purpose": "Shows the publish path for v0.x. v0.1.0 was partial (workspace:* not rewritten). v0.1.1 corrected via pnpm publish -r. v0.2.0 ships the FTS+hybrid sprint \u2014 minor bump per semver due to additive contract methods (searchFulltext, asOf).",
   "npm_org": "kybernesis",
   "npm_scope": "@kybernesis/*",
   "package_count": 5,
@@ -14,11 +14,11 @@
     "@kybernesis/arcana-provider-sqlite-vec"
   ],
   "publish_order": "contracts first (no workspace deps), then core, testkit, provider-libsql, provider-sqlite-vec in any order",
-  "publish_status": "complete \u2014 v0.1.1 published 2026-05-20 via pnpm publish -r; all 5 packages live; semver deps verified (no workspace:* leakage)",
+  "publish_status": "v0.1.1 live since 2026-05-20; v0.2.0 in flight \u2014 see lane below",
   "publish_command": "pnpm publish -r --filter='./packages/*' --access public",
   "generated": "2026-05-20",
   "system": "arcana",
-  "milestone": "v0.1.1",
+  "milestone": "v0.2.0",
   "status_legend": [
     {
       "id": "not_started",
@@ -104,44 +104,40 @@
     {
       "id": "v0_1_1_manual",
       "label": "v0.1.1 \u2014 Manual publish (correct approach \u2014 pnpm publish -r)",
+      "status": "green",
+      "closed": "2026-05-20",
+      "stages": [
+        { "id": "login", "label": "npm login (OTP flow)", "status": "green" },
+        { "id": "publish_all", "label": "pnpm publish -r --filter='./packages/*' --access public", "status": "green", "note": "All 5 packages live; workspace:* deps rewritten" },
+        { "id": "verify_contracts", "label": "npm view @kybernesis/arcana-contracts@0.1.1", "status": "green" },
+        { "id": "verify_sqlite_vec", "label": "npm view @kybernesis/arcana-provider-sqlite-vec@0.1.1", "status": "green" },
+        { "id": "tag", "label": "git tag v0.1.1 && git push --tags", "status": "wired", "note": "Tag may be pending; non-blocking" }
+      ]
+    },
+    {
+      "id": "v0_2_0_manual",
+      "label": "v0.2.0 \u2014 FTS+hybrid sprint publish",
       "status": "not_started",
-      "blocked_on": "npm login (OTP browser flow)",
+      "blocked_on": "npm login (OTP browser flow) + sprint commit landed",
+      "semver_rationale": "Minor bump: searchFulltext added to StructuredStore contract, FulltextMatch/FulltextSearchOpts/FulltextField types added, kernel hybridSearch result shape changed (no prior consumers \u2014 was throwing), asOf added as optional param (backward compatible). All changes additive at the consumer level.",
       "steps": [
-        "npm login (one-time, user handles OTP)",
+        "Bump every package's version to 0.2.0 (5 packages)",
+        "pnpm publish -r --dry-run \u2014 verify workspace:* rewrites cleanly",
+        "npm login (OTP flow if needed)",
         "pnpm publish -r --filter='./packages/*' --access public",
-        "Verify: npm view @kybernesis/arcana-contracts@0.1.1",
-        "Verify: npm view @kybernesis/arcana-provider-sqlite-vec@0.1.1",
-        "git tag v0.1.1 && git push --tags"
+        "Verify: npm view @kybernesis/arcana-contracts@0.2.0",
+        "Verify: npm view @kybernesis/arcana-core@0.2.0",
+        "Verify: npm view @kybernesis/arcana-provider-libsql@0.2.0",
+        "git tag v0.2.0 && git push --tags"
       ],
       "stages": [
-        {
-          "id": "login",
-          "label": "npm login (OTP flow)",
-          "status": "not_started",
-          "note": "Blocked \u2014 user must complete browser OTP"
-        },
-        {
-          "id": "publish_all",
-          "label": "pnpm publish -r --filter='./packages/*' --access public",
-          "status": "not_started",
-          "note": "Rewrites workspace:* deps correctly; publishes all 5 packages in dependency order"
-        },
-        {
-          "id": "verify_contracts",
-          "label": "npm view @kybernesis/arcana-contracts@0.1.1",
-          "status": "not_started"
-        },
-        {
-          "id": "verify_sqlite_vec",
-          "label": "npm view @kybernesis/arcana-provider-sqlite-vec@0.1.1",
-          "status": "not_started",
-          "note": "New package in v0.1.1"
-        },
-        {
-          "id": "tag",
-          "label": "git tag v0.1.1 && git push --tags",
-          "status": "not_started"
-        }
+        { "id": "version_bump", "label": "Bump all 5 packages to 0.2.0", "status": "not_started" },
+        { "id": "dry_run", "label": "pnpm publish -r --dry-run (verify workspace:* rewrites)", "status": "not_started" },
+        { "id": "publish_all", "label": "pnpm publish -r --filter='./packages/*' --access public", "status": "not_started" },
+        { "id": "verify_contracts", "label": "npm view @kybernesis/arcana-contracts@0.2.0", "status": "not_started" },
+        { "id": "verify_core", "label": "npm view @kybernesis/arcana-core@0.2.0", "status": "not_started" },
+        { "id": "verify_libsql", "label": "npm view @kybernesis/arcana-provider-libsql@0.2.0", "status": "not_started" },
+        { "id": "tag", "label": "git tag v0.2.0 && git push --tags", "status": "not_started" }
       ]
     },
     {

@@ -11,6 +11,9 @@ import type {
   AgentSelf,
   NodeRef,
   MemoryFilter,
+  FulltextSearchOpts,
+  FulltextMatch,
+  FulltextField,
 } from '@kybernesis/arcana-contracts';
 
 /**
@@ -122,12 +125,55 @@ export function createFakeStructuredStore(): StructuredStore {
     storeFact: async (fact: Fact) => {
       facts.set(fact.id, fact);
     },
-    getFactsForEntity: async (entity: string, attribute?: string) => {
-      return [...facts.values()].filter(
-        (f) =>
-          f.entity === entity &&
-          (attribute === undefined || f.attribute === attribute),
-      );
+    getFactsForEntity: async (entity: string, attribute?: string, asOf?: string) => {
+      return [...facts.values()].filter((f) => {
+        if (f.entity !== entity) return false;
+        if (attribute !== undefined && f.attribute !== attribute) return false;
+        if (asOf !== undefined && f.expiresAt !== undefined && f.expiresAt <= asOf) {
+          return false;
+        }
+        return true;
+      });
+    },
+
+    searchFulltext: async (query: string, opts?: FulltextSearchOpts): Promise<FulltextMatch[]> => {
+      const tokens = query.toLowerCase().split(/\s+/).filter((w) => w.length > 0);
+      if (tokens.length === 0) return [];
+      const selectedFields = (opts?.fields ?? ['title', 'summary', 'content', 'tags']) as FulltextField[];
+      const matches: FulltextMatch[] = [];
+      for (const m of memories.values()) {
+        if (opts?.tier && m.tier !== opts.tier) continue;
+        if (opts?.scopes) {
+          const ms = m.scopes ?? {};
+          if (opts.scopes.org_id !== undefined && ms.org_id !== opts.scopes.org_id) continue;
+          if (opts.scopes.project_id !== undefined && ms.project_id !== opts.scopes.project_id) continue;
+        }
+        const fieldText: Record<FulltextField, string> = {
+          title: m.title.toLowerCase(),
+          summary: m.summary.toLowerCase(),
+          content: m.content.toLowerCase(),
+          tags: m.tags.join(' ').toLowerCase(),
+        };
+        const matchedFields: FulltextField[] = [];
+        let hits = 0;
+        for (const field of selectedFields) {
+          const haystack = fieldText[field];
+          const fieldHits = tokens.filter((t) => haystack.includes(t)).length;
+          if (fieldHits > 0) {
+            matchedFields.push(field);
+            hits += fieldHits;
+          }
+        }
+        if (hits === 0) continue;
+        matches.push({
+          memoryId: m.id,
+          score: Math.min(1, hits / (tokens.length * selectedFields.length)),
+          matchedFields,
+        });
+      }
+      matches.sort((a, b) => b.score - a.score);
+      const topK = opts?.topK ?? 50;
+      return matches.slice(0, topK);
     },
     markFactSuperseded: async (oldFactId: string, newFactId: string) => {
       const existing = facts.get(oldFactId);

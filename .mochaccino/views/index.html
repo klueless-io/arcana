@@ -71,10 +71,10 @@
 <div class="header">
   <div class="wordmark">// <em>KYBERNESIS</em> · ARCANA · BUILD DOCUMENTATION</div>
   <h1>Mochaccino Gallery</h1>
-  <div class="tagline">Portable brain kernel for AI agents — v0.1.1 — 2026-05-20</div>
+  <div class="tagline">Portable brain kernel for AI agents — v0.2.0 candidate (v0.1.1 live) — 2026-05-20</div>
   <div class="stats">
     <div class="stat">
-      <div class="stat-val">212</div>
+      <div class="stat-val">232</div>
       <div class="stat-label">Tests passing</div>
     </div>
     <div class="stat">
@@ -86,7 +86,7 @@
       <div class="stat-label">Write parity</div>
     </div>
     <div class="stat">
-      <div class="stat-val warning">50%</div>
+      <div class="stat-val emerald">85%</div>
       <div class="stat-label">Read parity</div>
     </div>
     <div class="stat">
@@ -146,7 +146,7 @@
     <div class="card-accent ca-cyan"></div>
     <div class="card-label">Pipeline</div>
     <div class="card-title">Publish Pipeline</div>
-    <div class="card-desc">v0.1.0 partial (workspace:* bug, libsql missed). v0.1.1 complete via pnpm publish -r. CI-driven path defined but not wired.</div>
+    <div class="card-desc">v0.1.0 partial · v0.1.1 live · v0.2.0 in flight (FTS+hybrid sprint, 2026-05-20). CI-driven path defined but not wired.</div>
     <div class="card-meta">
       <span class="datasource">03-publish-pipeline.json</span>
     </div>
@@ -159,22 +159,29 @@
     <div class="blocker">
       <div class="blocker-status">PENDING</div>
       <div class="blocker-body">
-        <div class="blocker-name">KyberBot version swap + merge</div>
-        <div class="blocker-detail">EC-015 applied · v0.1.1 confirmed live · awaiting final commit (file: → ^0.1.1) then arcana-adoption → main merge</div>
+        <div class="blocker-name">v0.2.0 npm publish</div>
+        <div class="blocker-detail">Sprint code shipped (FTS+hybrid). Awaiting version bump on 5 packages + pnpm publish -r + git tag v0.2.0.</div>
+      </div>
+    </div>
+    <div class="blocker">
+      <div class="blocker-status">PENDING</div>
+      <div class="blocker-body">
+        <div class="blocker-name">KyberBot hybrid-search.ts swap</div>
+        <div class="blocker-detail">Gated on parity harness per ADR 009. Kernel hybridSearch shape is wave-1 KyberBot-parity to minimise swap delta.</div>
       </div>
     </div>
     <div class="blocker">
       <div class="blocker-status">NEXT</div>
       <div class="blocker-body">
-        <div class="blocker-name">hybridSearch implementation</div>
-        <div class="blocker-detail">Needs FTS5 tables in StructuredStore DDL + sqlite-vec wired into createArcana(). After KyberBot merge.</div>
+        <div class="blocker-name">arcana-provider-postgres</div>
+        <div class="blocker-detail">Brain migration gate. tsvector @@ to_tsquery impl of searchFulltext satisfying same contract as libsql FTS5.</div>
       </div>
     </div>
     <div class="blocker">
       <div class="blocker-status">DEFERRED</div>
       <div class="blocker-body">
         <div class="blocker-name">Sleep pipeline (13 steps)</div>
-        <div class="blocker-detail">All stubbed. KyberBot's 9-step pipeline is the reference. Demanded when KyberBot wires sleep modules to Arcana.</div>
+        <div class="blocker-detail">All stubbed. KyberBot's 9-step pipeline is the reference. ADR 010 records the consolidate/observe gap — design decision deferred.</div>
       </div>
     </div>
   </div>
@@ -188,8 +195,11 @@
     <div class="done-item">arcana-provider-sqlite-vec v0.1.1</div>
     <div class="done-item">getEntityProfile</div>
     <div class="done-item">factRetrieval</div>
-    <div class="done-item">KyberBot EC-015</div>
-    <div class="done-item">npm publish clean</div>
+    <div class="done-item">hybridSearch (kernel)</div>
+    <div class="done-item">searchFulltext (libsql FTS5)</div>
+    <div class="done-item">queryFacts asOf</div>
+    <div class="done-item">ADR 009 parity gate</div>
+    <div class="done-item">ADR 010 sleep step gap</div>
   </div>
 </div>
 

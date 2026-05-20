@@ -32,9 +32,10 @@
   .v-cyan    { color: var(--accent-cyan);     } .f-cyan    { background: var(--accent-cyan); }
 
   /* legend */
-  .legend { display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; }
+  .legend { display: flex; gap: 24px; margin-bottom: 12px; flex-wrap: wrap; }
   .legend-item { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--fg-tertiary); }
   .lswatch { width: 10px; height: 10px; flex-shrink: 0; }
+  .legend-title { font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--fg-muted); margin: 8px 0 6px; }
 
   /* section title */
   .section-title { font-size: 11px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent-emerald); padding: 12px 0 8px; }
@@ -45,14 +46,24 @@
   .zone-name { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent-cyan); }
   .zone-sub  { font-size: 10px; color: var(--fg-muted); letter-spacing: 0.5px; }
 
-  /* method row */
-  .method { display: grid; grid-template-columns: 200px 80px 1fr; gap: 0; margin-bottom: 1px; background: var(--border-color); }
+  /* method row — adds consumer column */
+  .method { display: grid; grid-template-columns: 200px 80px 220px 1fr; gap: 0; margin-bottom: 1px; background: var(--border-color); }
   .m-name   { padding: 8px 14px; font-family: var(--font-mono); font-size: 12px; color: var(--fg-secondary); background: var(--bg-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .m-status { padding: 8px 12px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; display: flex; align-items: center; justify-content: center; }
   .s-impl { background: rgba(16,185,129,0.12); color: var(--accent-emerald); }
   .s-stub { background: rgba(245,158,11,0.10); color: var(--status-warning); }
   .s-miss { background: rgba(239,68,68,0.12);  color: var(--status-error); }
   .s-def  { background: rgba(71,85,105,0.15);  color: var(--fg-muted); }
+
+  .m-consumers { padding: 6px 10px; background: var(--bg-secondary); display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  .pill { font-size: 9px; padding: 2px 6px; border-radius: 2px; font-family: var(--font-mono); letter-spacing: 0.3px; display: inline-flex; align-items: center; gap: 4px; }
+  .pill .pill-c { font-size: 8px; opacity: 0.7; text-transform: uppercase; }
+  .p-wired    { background: rgba(16,185,129,0.18); color: var(--accent-emerald); }
+  .p-parallel { background: rgba(245,158,11,0.16); color: var(--status-warning); }
+  .p-wrapped  { background: rgba(6,182,212,0.16);  color: var(--accent-cyan); }
+  .p-needs    { background: rgba(239,68,68,0.14);  color: var(--status-error); }
+  .p-unused   { background: rgba(71,85,105,0.16);  color: var(--fg-muted); }
+
   .m-detail { padding: 8px 14px; font-size: 11px; background: var(--bg-secondary); color: var(--fg-tertiary); }
   .driven { color: var(--accent-cyan); font-weight: 400; }
   .note   { color: var(--fg-muted); font-size: 10.5px; margin-top: 1px; }
@@ -72,7 +83,7 @@
 <div class="header">
   <div class="wordmark">// <em>ARCANA</em> · KERNEL METHOD STATUS</div>
   <h1>Kernel Method Status</h1>
-  <div class="tagline">Which methods are real vs stubs · demand-driven by KyberBot adoption · v0.1.1 · 212 tests</div>
+  <div class="tagline">Methods × consumers · demand-driven by KyberBot adoption · v0.1.1 · 232 tests · 2026-05-20</div>
 </div>
 
 <div class="parity-strip">
@@ -83,8 +94,8 @@
   </div>
   <div class="parity-item">
     <div class="parity-label">Read Parity</div>
-    <div class="parity-value v-warning">50%</div>
-    <div class="parity-bar"><div class="parity-fill f-warning" style="width:50%"></div></div>
+    <div class="parity-value v-emerald">85%</div>
+    <div class="parity-bar"><div class="parity-fill f-emerald" style="width:85%"></div></div>
   </div>
   <div class="parity-item">
     <div class="parity-label">Sleep Pipeline</div>
@@ -93,11 +104,12 @@
   </div>
   <div class="parity-item">
     <div class="parity-label">Implemented / Total</div>
-    <div class="parity-value v-cyan">14 / 28</div>
-    <div class="parity-bar"><div class="parity-fill f-cyan" style="width:50%"></div></div>
+    <div class="parity-value v-cyan">17 / 28</div>
+    <div class="parity-bar"><div class="parity-fill f-cyan" style="width:61%"></div></div>
   </div>
 </div>
 
+<div class="legend-title">// kernel status</div>
 <div class="legend">
   <div class="legend-item"><div class="lswatch" style="background:var(--accent-emerald)"></div>Implemented + tested</div>
   <div class="legend-item"><div class="lswatch" style="background:var(--status-warning)"></div>Stub (NotImplementedError)</div>
@@ -105,79 +117,186 @@
   <div class="legend-item"><div class="lswatch" style="background:var(--fg-muted);border:1px solid var(--border-hover)"></div>Deferred</div>
 </div>
 
+<div class="legend-title">// consumer integration mode (per consumer, per method)</div>
+<div class="legend">
+  <div class="legend-item"><span class="pill p-wired">wired</span> consumer calls kernel directly</div>
+  <div class="legend-item"><span class="pill p-parallel">parallel</span> consumer has own impl · swap pending parity gate (ADR 009)</div>
+  <div class="legend-item"><span class="pill p-wrapped">wrapped</span> kernel call behind local wrapper</div>
+  <div class="legend-item"><span class="pill p-needs">needs</span> blocked / wants but kernel stub or prerequisites missing</div>
+  <div class="legend-item"><span class="pill p-unused">unused</span> doesn't apply to this consumer</div>
+</div>
+<div class="legend" style="margin-top:6px">
+  <div class="legend-item"><span class="pill-c" style="font-size:10px;color:var(--fg-muted)">KB = KyberBot · KD = KyberAgent Desktop · KBR = Kybernesis Brain</span></div>
+</div>
+
 <!-- access.command -->
 <div class="section-title">// ZONES</div>
 <div class="zone">
-  <div class="zone-header"><span class="zone-name">access.command</span><span class="zone-sub">write facade · 10 methods · write parity 100%</span></div>
-  <div class="method"><div class="m-name">upsertEntity</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">KyberBot #2 entity-graph.ts</span><div class="note">commit 17c3f48 · 6 integration tests</div></div></div>
-  <div class="method"><div class="m-name">deleteEntity</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">KyberBot #2 entity-graph.ts</span><div class="note">additive to StructuredStore (ADR 002)</div></div></div>
-  <div class="method"><div class="m-name">linkNodes</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">KyberBot #2 entity-graph.ts</span><div class="note">renamed from linkMemories — NodeRef signature (ADR 001)</div></div></div>
-  <div class="method"><div class="m-name">recordFact</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">ADR 004 — anticipated KyberBot #4 + Brain fact pipeline</span><div class="note">UUID id + ISO createdAt defaults · sentence-form required</div></div></div>
-  <div class="method"><div class="m-name">updateMemory</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">ADR 005 — Memory is not append-only</span><div class="note">partial update · contentHash recomputed · unblocked pin / moveToTier</div></div></div>
-  <div class="method"><div class="m-name">pin</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">ADR 005</span><div class="note">thin wrapper: updateMemory(id, {isPinned:true})</div></div></div>
-  <div class="method"><div class="m-name">moveToTier</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">ADR 005</span><div class="note">thin wrapper: updateMemory(id, {tier})</div></div></div>
-  <div class="method"><div class="m-name">markFactSuperseded</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">KyberBot #11 sleep/observe.ts</span><div class="note">isLatest=false + supersededBy (ADR 006)</div></div></div>
-  <div class="method"><div class="m-name">storeContradiction</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">KyberBot #11 sleep/observe.ts</span><div class="note">mints id + createdAt · status defaults 'pending' (ADR 006)</div></div></div>
-  <div class="method"><div class="m-name">markMemorySuperseded</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">ADR 007 §3.2 — Brain-vs-Convex audit</span><div class="note">memory-level supersession · mirrors markFactSuperseded</div></div></div>
-  <div class="method"><div class="m-name">deleteMemory</div><div class="m-status s-stub">○ stub</div><div class="m-detail"><span class="note">no consumer demand yet</span></div></div>
-  <div class="method"><div class="m-name">updateBlock</div><div class="m-status s-stub">○ stub</div><div class="m-detail"><span class="note">no consumer demand yet</span></div></div>
+  <div class="zone-header"><span class="zone-name">access.command</span><span class="zone-sub">write facade · 12 methods · write parity 100%</span></div>
+
+  <div class="method"><div class="m-name">upsertEntity</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-wired">KB <span class="pill-c">wired</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">KyberBot #2 entity-graph.ts</span><div class="note">commit 17c3f48 · 6 integration tests · closed 2026-05-18</div></div>
+  </div>
+  <div class="method"><div class="m-name">deleteEntity</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-wired">KB <span class="pill-c">wired</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">KyberBot #2 entity-graph.ts</span><div class="note">additive to StructuredStore (ADR 002)</div></div>
+  </div>
+  <div class="method"><div class="m-name">linkNodes</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-wired">KB <span class="pill-c">wired</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">KyberBot #2 entity-graph.ts</span><div class="note">renamed from linkMemories per NodeRef signature (ADR 001)</div></div>
+  </div>
+  <div class="method"><div class="m-name">recordFact</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-needs">KB <span class="pill-c">needs</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">ADR 004 — anticipated KyberBot #4 + Brain fact pipeline</span><div class="note">UUID id + ISO createdAt defaults · sentence-form required</div></div>
+  </div>
+  <div class="method"><div class="m-name">updateMemory</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-wired">KB <span class="pill-c">wired</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">ADR 005 — Memory is not append-only</span><div class="note">partial update · contentHash recomputed · unblocked pin/moveToTier</div></div>
+  </div>
+  <div class="method"><div class="m-name">pin</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-wired">KB <span class="pill-c">wired</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">ADR 005</span><div class="note">thin wrapper: updateMemory(id, {isPinned:true})</div></div>
+  </div>
+  <div class="method"><div class="m-name">moveToTier</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-wired">KB <span class="pill-c">wired</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">ADR 005</span><div class="note">thin wrapper: updateMemory(id, {tier})</div></div>
+  </div>
+  <div class="method"><div class="m-name">markFactSuperseded</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-parallel">KB <span class="pill-c">parallel</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">KyberBot #11 sleep/observe.ts</span><div class="note">isLatest=false + supersededBy (ADR 006)</div></div>
+  </div>
+  <div class="method"><div class="m-name">storeContradiction</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-parallel">KB <span class="pill-c">parallel</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">KyberBot #11 sleep/observe.ts</span><div class="note">mints id + createdAt · status defaults 'pending' (ADR 006)</div></div>
+  </div>
+  <div class="method"><div class="m-name">markMemorySuperseded</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-needs">KB <span class="pill-c">needs</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">ADR 007 §3.2 — Brain-vs-Convex audit</span><div class="note">memory-level supersession · mirrors markFactSuperseded</div></div>
+  </div>
+  <div class="method"><div class="m-name">deleteMemory</div><div class="m-status s-stub">○ stub</div>
+    <div class="m-consumers"><span class="pill p-unused">KB <span class="pill-c">·</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-unused">KBR <span class="pill-c">·</span></span></div>
+    <div class="m-detail"><span class="note">no consumer demand yet</span></div>
+  </div>
+  <div class="method"><div class="m-name">updateBlock</div><div class="m-status s-stub">○ stub</div>
+    <div class="m-consumers"><span class="pill p-unused">KB <span class="pill-c">·</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="note">no consumer demand yet · Brain may want for agent-self blocks</span></div>
+  </div>
 </div>
 
 <!-- ingest -->
 <div class="zone">
   <div class="zone-header"><span class="zone-name">ingest</span><span class="zone-sub">2 methods + 2 cross-cutting</span></div>
-  <div class="method"><div class="m-name">storeMemory</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">KyberBot #1 timeline.ts</span><div class="note">commit 1f6a7c4 · 5 integration tests · canonical row write only</div></div></div>
-  <div class="method"><div class="m-name">ingestDocument</div><div class="m-status s-stub">○ stub</div><div class="m-detail"><span class="note">no consumer demand yet</span></div></div>
-  <div class="method"><div class="m-name">[vector-optional]</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">arcana-config merge + DVR review</span><div class="note">ArcanaOptions.vector? optional · createMissingVectorStore() fallback</div></div></div>
-  <div class="method"><div class="m-name">[sqlite-vec provider]</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">T13</span><div class="note">commit 7bb12c4 · vec0 virtual table · rowid_ref pattern · :memory: · 11 tests</div></div></div>
+  <div class="method"><div class="m-name">storeMemory</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-wired">KB <span class="pill-c">wired</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">KyberBot #1 timeline.ts</span><div class="note">commit 1f6a7c4 · 5 integration tests · canonical row write only</div></div>
+  </div>
+  <div class="method"><div class="m-name">ingestDocument</div><div class="m-status s-stub">○ stub</div>
+    <div class="m-consumers"><span class="pill p-unused">KB <span class="pill-c">·</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-unused">KBR <span class="pill-c">·</span></span></div>
+    <div class="m-detail"><span class="note">no consumer demand yet</span></div>
+  </div>
+  <div class="method"><div class="m-name">[vector-optional]</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-wired">KB <span class="pill-c">wired</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-unused">KBR <span class="pill-c">·</span></span></div>
+    <div class="m-detail"><span class="driven">arcana-config merge + DVR review</span><div class="note">ArcanaOptions.vector? optional · createMissingVectorStore() fallback</div></div>
+  </div>
+  <div class="method"><div class="m-name">[sqlite-vec provider]</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-unused">KB <span class="pill-c">·</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">T13</span><div class="note">commit 7bb12c4 · vec0 virtual table · rowid_ref pattern · :memory: · 11 tests · drops ChromaDB/Docker dep</div></div>
+  </div>
 </div>
 
 <!-- retrieve -->
 <div class="zone">
-  <div class="zone-header"><span class="zone-name">retrieve</span><span class="zone-sub">4 methods · read parity gap lives here</span></div>
-  <div class="method"><div class="m-name">getEntityProfile</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">T11 arcana-core internal</span><div class="note">commit 7bb12c4 · assembles from facts/insights/neighbors · stores + caches · QueryResult</div></div></div>
-  <div class="method"><div class="m-name">factRetrieval</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">T12 arcana-core internal</span><div class="note">commit 7bb12c4 · structured text-match · word-hit scoring · why: 'text-match (structured-only, no FTS5)'</div></div></div>
-  <div class="method"><div class="m-name">hybridSearch</div><div class="m-status s-stub">○ stub</div><div class="m-detail"><span class="note">requires FTS5 tables in StructuredStore + sqlite-vec wired · next implementation target after KyberBot merge</span></div></div>
-  <div class="method"><div class="m-name">queryFacts (asOf)</div><div class="m-status s-miss">✗ missing</div><div class="m-detail"><span class="note">not even stubbed · bitemporal filter (createdAt ≤ asOf ∧ expiresAt > asOf) · identified ADR 008 · Brain migration gate</span></div></div>
+  <div class="zone-header"><span class="zone-name">retrieve</span><span class="zone-sub">5 methods · sprint 2026-05-20 closed the read-parity gap</span></div>
+  <div class="method"><div class="m-name">getEntityProfile</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-needs">KB <span class="pill-c">needs</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">T11 arcana-core internal</span><div class="note">commit 7bb12c4 · assembles from facts/insights/neighbors · stores + caches · QueryResult</div></div>
+  </div>
+  <div class="method"><div class="m-name">factRetrieval</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-parallel">KB <span class="pill-c">parallel</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">T12 arcana-core internal</span><div class="note">commit 7bb12c4 · structured text-match · upgraded to wave-1 result shape · why: 'text-match (structured-only, no FTS5)'</div></div>
+  </div>
+  <div class="method"><div class="m-name">hybridSearch</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-parallel">KB <span class="pill-c">parallel</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">FTS+hybrid sprint 2026-05-20</span><div class="note">RRF (k=60) over keyword (FTS5) + semantic (VectorStore) + graph (BFS) · wave-1 KyberBot-parity result shape · optional reranker · per-channel failures degrade gracefully</div><div class="warn">KyberBot swap blocked on parity gate per ADR 009</div></div>
+  </div>
+  <div class="method"><div class="m-name">queryFacts (asOf timeline)</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-unused">KB <span class="pill-c">·</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">ADR 008 + sprint 2026-05-20</span><div class="note">optional asOf: ISO-8601 param · filters facts where expiresAt ≤ asOf · backward compat · libsql impl filters in SQL</div></div>
+  </div>
+  <div class="method"><div class="m-name">[searchFulltext provider]</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-parallel">KB <span class="pill-c">parallel</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">sprint 2026-05-20</span><div class="note">new StructuredStore.searchFulltext contract method · libsql impl uses FTS5 virtual table + sync triggers · returns FulltextMatch[] with memoryId + 0..1 score + matchedFields · postgres impl (future) uses tsvector</div></div>
+  </div>
 </div>
 
 <!-- access.query -->
 <div class="zone">
   <div class="zone-header"><span class="zone-name">access.query</span><span class="zone-sub">read facade · 7 methods</span></div>
-  <div class="method"><div class="m-name">queryFacts</div><div class="m-status s-impl">✓ done</div><div class="m-detail"><span class="driven">ADR 004</span><div class="note">structured.getFactsForEntity · fresh QueryResult envelope</div></div></div>
-  <div class="method"><div class="m-name">getNeighbors</div><div class="m-status s-stub">○ stub</div><div class="m-detail"></div></div>
-  <div class="method"><div class="m-name">stats</div><div class="m-status s-stub">○ stub</div><div class="m-detail"></div></div>
-  <div class="method"><div class="m-name">listContradictions</div><div class="m-status s-stub">○ stub</div><div class="m-detail"><span class="note">provider surface exists · kernel facade not exposed</span></div></div>
-  <div class="method"><div class="m-name">listInsights</div><div class="m-status s-stub">○ stub</div><div class="m-detail"></div></div>
-  <div class="method"><div class="m-name">readBlock</div><div class="m-status s-stub">○ stub</div><div class="m-detail"></div></div>
-  <div class="method"><div class="m-name">getBlockHistory</div><div class="m-status s-stub">○ stub</div><div class="m-detail"></div></div>
+  <div class="method"><div class="m-name">queryFacts</div><div class="m-status s-impl">✓ done</div>
+    <div class="m-consumers"><span class="pill p-needs">KB <span class="pill-c">needs</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="driven">ADR 004 + sprint 2026-05-20</span><div class="note">structured.getFactsForEntity · fresh QueryResult envelope · now accepts optional asOf for bitemporal filtering</div></div>
+  </div>
+  <div class="method"><div class="m-name">getNeighbors</div><div class="m-status s-stub">○ stub</div>
+    <div class="m-consumers"><span class="pill p-needs">KB <span class="pill-c">needs</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"></div>
+  </div>
+  <div class="method"><div class="m-name">stats</div><div class="m-status s-stub">○ stub</div>
+    <div class="m-consumers"><span class="pill p-unused">KB <span class="pill-c">·</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-unused">KBR <span class="pill-c">·</span></span></div>
+    <div class="m-detail"></div>
+  </div>
+  <div class="method"><div class="m-name">listContradictions</div><div class="m-status s-stub">○ stub</div>
+    <div class="m-consumers"><span class="pill p-needs">KB <span class="pill-c">needs</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="note">provider surface exists · kernel facade not exposed</span></div>
+  </div>
+  <div class="method"><div class="m-name">listInsights</div><div class="m-status s-stub">○ stub</div>
+    <div class="m-consumers"><span class="pill p-needs">KB <span class="pill-c">needs</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"></div>
+  </div>
+  <div class="method"><div class="m-name">readBlock</div><div class="m-status s-stub">○ stub</div>
+    <div class="m-consumers"><span class="pill p-unused">KB <span class="pill-c">·</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"></div>
+  </div>
+  <div class="method"><div class="m-name">getBlockHistory</div><div class="m-status s-stub">○ stub</div>
+    <div class="m-consumers"><span class="pill p-unused">KB <span class="pill-c">·</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"></div>
+  </div>
 </div>
 
 <!-- maintain -->
 <div class="zone">
-  <div class="zone-header"><span class="zone-name">maintain</span><span class="zone-sub">sleep pipeline · entirely stubbed</span></div>
-  <div class="method"><div class="m-name">runSleepPipeline</div><div class="m-status s-stub">○ stub</div><div class="m-detail"><span class="note">13-step pipeline · </span><span class="warn">contracts ahead of kernel: expiresAt, surprisalScore, lastReinforcedAt in FactSchema but unreachable from any kernel path</span></div></div>
-  <div class="method"><div class="m-name">startSleepSchedule</div><div class="m-status s-stub">○ stub</div><div class="m-detail"></div></div>
-  <div class="method"><div class="m-name">stopSleepSchedule</div><div class="m-status s-stub">○ stub</div><div class="m-detail"></div></div>
+  <div class="zone-header"><span class="zone-name">maintain</span><span class="zone-sub">sleep pipeline · entirely stubbed · step-list gap unresolved (ADR 010)</span></div>
+  <div class="method"><div class="m-name">runSleepPipeline</div><div class="m-status s-stub">○ stub</div>
+    <div class="m-consumers"><span class="pill p-parallel">KB <span class="pill-c">parallel</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="note">13-step pipeline · KyberBot 9 vs Arcana 13 reconciliation deferred (ADR 010)</span><div class="warn">contracts ahead of kernel: surprisalScore, lastReinforcedAt unreachable until sleep lands · expiresAt now surfaced via queryFacts asOf</div></div>
+  </div>
+  <div class="method"><div class="m-name">startSleepSchedule</div><div class="m-status s-stub">○ stub</div>
+    <div class="m-consumers"><span class="pill p-parallel">KB <span class="pill-c">parallel</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-needs">KBR <span class="pill-c">needs</span></span></div>
+    <div class="m-detail"><span class="note">Scheduler provider integration; entirely stubbed</span></div>
+  </div>
+  <div class="method"><div class="m-name">stopSleepSchedule</div><div class="m-status s-stub">○ stub</div>
+    <div class="m-consumers"><span class="pill p-parallel">KB <span class="pill-c">parallel</span></span><span class="pill p-unused">KD <span class="pill-c">·</span></span><span class="pill p-unused">KBR <span class="pill-c">·</span></span></div>
+    <div class="m-detail"></div>
+  </div>
 </div>
 
 <!-- summary -->
 <div class="section-title">// SUMMARY</div>
 <div class="summary">
   <div class="summary-inner">
-    <div class="s-stat"><div class="s-val v-emerald">14</div><div class="s-label">Implemented</div></div>
-    <div class="s-stat"><div class="s-val v-warning">13</div><div class="s-label">Stubbed</div></div>
-    <div class="s-stat"><div class="s-val v-error">1</div><div class="s-label">Missing</div></div>
-    <div class="s-stat"><div class="s-val">212</div><div class="s-label">Tests passing</div></div>
+    <div class="s-stat"><div class="s-val v-emerald">17</div><div class="s-label">Implemented</div></div>
+    <div class="s-stat"><div class="s-val v-warning">11</div><div class="s-label">Stubbed</div></div>
+    <div class="s-stat"><div class="s-val v-error">0</div><div class="s-label">Missing</div></div>
+    <div class="s-stat"><div class="s-val">232</div><div class="s-label">Tests passing</div></div>
     <div class="s-stat">
       <div class="s-label" style="margin-bottom:8px">Contracts ahead of kernel</div>
-      <span class="tag">expiresAt</span><span class="tag">surprisalScore</span><span class="tag">lastReinforcedAt</span>
-      <div class="note" style="margin-top:6px;font-size:10px;color:var(--fg-muted)">In FactSchema · unreachable from any kernel method or sleep step</div>
+      <span class="tag">surprisalScore</span><span class="tag">lastReinforcedAt</span>
+      <div class="note" style="margin-top:6px;font-size:10px;color:var(--fg-muted)">expiresAt now reachable via queryFacts asOf · two remaining land with sleep pipeline</div>
     </div>
     <div class="s-stat">
       <div class="s-label" style="margin-bottom:8px">Next target</div>
-      <div style="color:var(--status-warning);font-size:13px">hybridSearch</div>
-      <div class="note" style="margin-top:3px;font-size:10px">FTS5 in StructuredStore + sqlite-vec wired</div>
+      <div style="color:var(--status-warning);font-size:13px">arcana-provider-postgres</div>
+      <div class="note" style="margin-top:3px;font-size:10px">Brain migration gate · tsvector impl of searchFulltext</div>
     </div>
   </div>
 </div>
@@ -211,7 +330,7 @@
   }
 
   document.getElementById('copy-btn').addEventListener('click', () => {
-    const lines = ['ARCANA KERNEL METHODS — context', ''];
+    const lines = ['ARCANA KERNEL METHODS × CONSUMERS — context', ''];
     let currentZone = null;
     document.querySelectorAll('.method-wrap').forEach(wrap => {
       if (!wrap.querySelector('.row-check').checked) return;
@@ -225,9 +344,12 @@
       }
       const name   = method.querySelector('.m-name').textContent.trim();
       const status = method.querySelector('.m-status').textContent.trim();
+      const consumerPills = [...method.querySelectorAll('.m-consumers .pill')]
+        .map(p => p.textContent.trim().replace(/\s+/g, ' '))
+        .join(' · ');
       const notes  = [...method.querySelectorAll('.driven,.note,.warn')]
                        .map(e => e.textContent.trim()).filter(Boolean).join(' · ');
-      lines.push('  ' + name.padEnd(30) + status.padEnd(14) + (notes || ''));
+      lines.push('  ' + name.padEnd(28) + status.padEnd(12) + ' [' + consumerPills + '] ' + (notes || ''));
     });
     navigator.clipboard.writeText(lines.join('\n'));
     const flash = document.getElementById('copy-flash');

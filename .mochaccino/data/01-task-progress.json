@@ -1,11 +1,11 @@
 {
   "angle": "kanban",
-  "title": "Arcana v0.1.1 Build Progress",
-  "subtitle": "Task lifecycle across the scaffold + retrieve milestone",
-  "purpose": "Live view of where v0.1.1 stands. Each task moves todo → in-progress → done. Updated after every Tn closes.",
+  "title": "Arcana v0.2.0 Build Progress",
+  "subtitle": "Task lifecycle across the scaffold + retrieve + FTS/hybrid sprint",
+  "purpose": "Live view of where v0.2.0 stands. Each task moves todo → in-progress → done. Updated after every Tn closes.",
   "generated": "2026-05-20",
   "system": "arcana",
-  "milestone": "v0.1.1",
+  "milestone": "v0.2.0",
   "status_legend": [
     { "id": "todo", "symbol": "○", "label": "Not started" },
     { "id": "in_progress", "symbol": "◐", "label": "In progress" },
@@ -47,10 +47,11 @@
       "id": "todo",
       "label": "Todo (next — after KyberBot merge + npm publish)",
       "tasks": [
-        { "id": "T14", "title": "hybridSearch implementation", "blocked_on": "FTS5 in StructuredStore + sqlite-vec provider wired", "note": "Requires arcana-provider-sqlite-vec (done) + FTS5 tables in StructuredStore. RRF scoring, graph hops, optional reranker. Unblocks KyberBot module #9 (hybrid-search.ts)." },
-        { "id": "T15", "title": "npm publish v0.1.1 (pnpm publish -r)", "blocked_on": "npm login (user OTP flow)", "note": "5 packages now. Use `pnpm publish -r --filter='./packages/*' --access public`. v0.1.0 was partial (workspace:* not rewritten; arcana-provider-libsql missed). v0.1.1 is the correct first full publish." },
+        { "id": "T15", "title": "npm publish v0.2.0 (pnpm publish -r)", "blocked_on": "npm login (user OTP flow)", "note": "5 packages. Contract additions (searchFulltext + asOf) and kernel hybridSearch warrant minor bump per semver. Use `pnpm publish -r --filter='./packages/*' --access public`. Dry-run first to verify workspace:* rewrites correctly (lesson from v0.1.0)." },
         { "id": "T16", "title": "KyberBot arcana-adoption branch merge", "blocked_on": "EC-015 in-flight guard fix + npm publish (T15)", "note": "EC-015 is required before merge. EC-013/014 optional. 4 KyberBot-side patches still pending." },
-        { "id": "NS-005", "title": "Wire KyberBot read modules through Arcana", "note": "KyberBot write path: 100% integrated. Read path: KyberBot still reads through its own layer. Once getEntityProfile + factRetrieval land in Arcana (done), KyberBot modules #8/#9/#12 can be rewired to call Arcana instead of local implementations." }
+        { "id": "NS-005", "title": "Parity harness for KyberBot hybrid-search.ts swap", "blocked_on": "ADR 009 parity-gate methodology — implementation in KyberBot's repo against its fixture set", "note": "Per ADR 009, KyberBot cannot swap its parallel hybrid-search.ts to the kernel without a top-N overlap test. Lives in KyberBot's repo. Once threshold passes, the swap PR proceeds. Kernel hybridSearch shape was deliberately wave-1 matched to KyberBot to minimise the parity delta." },
+        { "id": "T17", "title": "Sleep pipeline step reconciliation + implementation", "blocked_on": "ADR 010 resolution + LLMProvider impl (e.g. arcana-provider-llm-openrouter/-ollama)", "note": "ADR 010 records the consolidate/observe gap between KyberBot's 9 steps and Arcana's 13. Implementation deferred to next sprint. Also unblocks expiresAt expiry sweeps and surprisalScore/lastReinforcedAt write paths." },
+        { "id": "T18", "title": "arcana-provider-postgres", "blocked_on": "Brain migration scoping (central vs distributed shape decision)", "note": "Required for Brain to swap off Convex. tsvector @@ to_tsquery impl of searchFulltext satisfying the same contract as libsql FTS5 impl. Driver decision: pg vs postgres (Porsager) vs drizzle." }
       ]
     },
     {
@@ -73,7 +74,8 @@
         { "id": "v0x.014", "title": "docs/requirements/brain-migration-requirements.md created", "closed": "2026-05-19", "note": "Full spec-writer output. Comprehensive requirements document for Kybernesis Brain migration to Arcana. Covers all 5 Convex artifacts to shed, migration phases, and success criteria. Future work — migration itself requires arcana-provider-postgres (not yet built)." },
         { "id": "T11", "title": "getEntityProfile implementation", "closed": "2026-05-20", "commit": "7bb12c4", "note": "Assembles from live facts/insights/neighbors; stores result; returns from storage on second call; QueryResult envelope. Demand-driven (T11). No VectorStore required — pure structured data assembly." },
         { "id": "T12", "title": "factRetrieval implementation", "closed": "2026-05-20", "commit": "7bb12c4", "note": "Structured-only text-match; scores by word-hit ratio; annotates with why field. hybridSearch path deferred until sqlite-vec + FTS5 ready. Demand-driven (T12)." },
-        { "id": "T13", "title": "arcana-provider-sqlite-vec", "closed": "2026-05-20", "commit": "7bb12c4", "note": "New package: VectorStore via vec0 virtual table; rowid_ref companion pattern; :memory: testing; 11 tests. All packages bumped to v0.1.1. Package graph back to 5 packages." }
+        { "id": "T13", "title": "arcana-provider-sqlite-vec", "closed": "2026-05-20", "commit": "7bb12c4", "note": "New package: VectorStore via vec0 virtual table; rowid_ref companion pattern; :memory: testing; 11 tests. All packages bumped to v0.1.1. Package graph back to 5 packages." },
+        { "id": "T14", "title": "FTS+hybrid sprint — searchFulltext contract + libsql FTS5 + kernel hybridSearch + queryFacts asOf", "closed": "2026-05-20", "commit": "TBD", "note": "Sprint scope (docs/plans/2026-05-20-fts-and-hybridsearch.md). Additive only — KyberBot untouched per ADR 009 parity-gate principle. Deliverables: (a) searchFulltext on StructuredStore + FulltextMatch/FulltextSearchOpts/FulltextField types; (b) libsql memories_fts virtual table + 3 sync triggers + impl; (c) kernel hybridSearch with RRF (k=60) over keyword + semantic + graph, wave-1 KyberBot-parity result shape (semanticScore/keywordScore/graphScore/matchType), per-channel failure isolation, optional reranker; (d) optional asOf on queryFacts + getFactsForEntity (bitemporal valid-time); (e) ADR 009 parity-gate methodology; (f) ADR 010 sleep step reconciliation deferred; (g) mochaccino matrix evolution with consumer columns. Tests 212 → 232." }
       ]
     },
     {

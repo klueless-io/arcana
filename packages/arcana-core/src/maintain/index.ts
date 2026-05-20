@@ -11,9 +11,13 @@ import type {
 import { NotImplementedError } from '../errors.js';
 
 /**
- * The 12-step sleep pipeline per arcana-spec.md §10.
+ * The 13-step sleep pipeline per arcana-spec.md §10.
  *
  * Order is locked. Each step is idempotent and resumable via a checkpoint.
+ *
+ * KyberBot's 9-step pipeline does not cleanly overlap with this list — see
+ * docs/decisions/010-sleep-pipeline-step-reconciliation.md for the
+ * `consolidate` and `observe` gaps and the deferred design decision.
  */
 export const SLEEP_STEPS = [
   'collectCandidates',

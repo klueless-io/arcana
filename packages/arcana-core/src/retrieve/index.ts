@@ -10,8 +10,6 @@ import type {
   Logger,
   QueryResult,
 } from '@kybernesis/arcana-contracts';
-import { NotImplementedError } from '../errors.js';
-
 export interface HybridSearchInput {
   query: string;
   scopes?: Scopes;
@@ -21,10 +19,30 @@ export interface HybridSearchInput {
   rerank?: boolean;
 }
 
+/**
+ * Wave-1 parity shape — mirrors KyberBot's existing hybrid-search result so
+ * downstream callers can swap providers with minimal adaptation. A future
+ * wave-2 evolution may switch to a nested `channels` object once consumers
+ * are stable. See docs/plans/2026-05-20-fts-and-hybridsearch.md §4.
+ */
 export interface HybridSearchResult {
   memory: Memory;
+  /** Fused RRF score across all channels this memory appears in. */
   score: number;
+  /** Per-channel scores. 0 when the memory wasn't returned by that channel. */
+  semanticScore: number;
+  keywordScore: number;
+  graphScore: number;
+  matchType: 'semantic' | 'keyword' | 'graph' | 'multi';
   why?: string;
+}
+
+/** RRF smoothing constant (de-facto standard). */
+const RRF_K = 60;
+
+/** Reciprocal Rank Fusion contribution for an item at zero-based rank. */
+function rrfContribution(rank: number): number {
+  return 1 / (RRF_K + rank + 1);
 }
 
 export interface FactRetrievalInput {
@@ -62,10 +80,165 @@ function makeEnvelope<T>(data: T): QueryResult<T> {
 
 export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
   return {
-    hybridSearch: async () => {
-      throw new NotImplementedError(
-        'arcana-core/retrieve.hybridSearch is a v0.1 scaffold stub; real implementation lands in v0.x',
-      );
+    async hybridSearch(
+      input: HybridSearchInput,
+    ): Promise<QueryResult<HybridSearchResult[]>> {
+      const topK = input.topK ?? 10;
+      const graphHops = input.graphHops ?? 1;
+      const channelTopK = topK * 3;
+
+      // Per-channel ranked lists of memory ids. Empty arrays when a channel
+      // is unavailable or errors — fusion still works with one channel.
+      let keywordIds: string[] = [];
+      let semanticIds: string[] = [];
+
+      // ── Keyword channel (FTS via StructuredStore) ─────────────────────
+      try {
+        const matches = await deps.structured.searchFulltext(input.query, {
+          scopes: input.scopes,
+          tier: input.tier,
+          topK: channelTopK,
+        });
+        keywordIds = matches.map((m) => m.memoryId);
+      } catch (err) {
+        deps.logger.debug('arcana.retrieve.hybridSearch.keyword-channel-failed', {
+          error: (err as Error).message,
+        });
+      }
+
+      // ── Semantic channel (vector via EmbeddingProvider + VectorStore) ─
+      try {
+        const embedding = await deps.embed.embed(input.query);
+        const vectorMatches = await deps.vector.query(embedding, {
+          topK: channelTopK,
+        });
+        // VectorStore returns chunk ids; metadata SHOULD carry memoryId.
+        // Fall back: skip entries without one (cannot route to a memory).
+        const ids: string[] = [];
+        for (const m of vectorMatches) {
+          const memId =
+            (m.metadata?.memoryId as string | undefined) ??
+            (m.metadata?.memory_id as string | undefined);
+          if (memId && !ids.includes(memId)) ids.push(memId);
+        }
+        semanticIds = ids;
+      } catch (err) {
+        deps.logger.debug('arcana.retrieve.hybridSearch.semantic-channel-failed', {
+          error: (err as Error).message,
+        });
+      }
+
+      // ── Graph channel (BFS over neighbors of top keyword+semantic hits) ─
+      const graphIds: string[] = [];
+      if (graphHops > 0) {
+        const seeds = Array.from(new Set([...keywordIds.slice(0, 5), ...semanticIds.slice(0, 5)]));
+        const seenInGraph = new Set<string>([...keywordIds, ...semanticIds]);
+        let frontier = seeds;
+        for (let hop = 0; hop < graphHops; hop++) {
+          const nextFrontier: string[] = [];
+          for (const seedId of frontier) {
+            try {
+              const neighbors = await deps.structured.getNeighbors({
+                type: 'memory',
+                id: seedId,
+              });
+              for (const n of neighbors) {
+                if (n.type !== 'memory') continue;
+                if (seenInGraph.has(n.id)) continue;
+                seenInGraph.add(n.id);
+                graphIds.push(n.id);
+                nextFrontier.push(n.id);
+              }
+            } catch (err) {
+              deps.logger.debug('arcana.retrieve.hybridSearch.graph-hop-failed', {
+                seedId,
+                error: (err as Error).message,
+              });
+            }
+          }
+          frontier = nextFrontier;
+          if (frontier.length === 0) break;
+        }
+      }
+
+      // ── RRF fusion ───────────────────────────────────────────────────
+      type Fused = {
+        memoryId: string;
+        score: number;
+        semanticScore: number;
+        keywordScore: number;
+        graphScore: number;
+      };
+      const fused = new Map<string, Fused>();
+
+      const addChannel = (
+        ids: string[],
+        channel: 'semantic' | 'keyword' | 'graph',
+      ): void => {
+        ids.forEach((id, rank) => {
+          const contribution = rrfContribution(rank);
+          const existing = fused.get(id) ?? {
+            memoryId: id,
+            score: 0,
+            semanticScore: 0,
+            keywordScore: 0,
+            graphScore: 0,
+          };
+          existing.score += contribution;
+          if (channel === 'semantic') existing.semanticScore = contribution;
+          if (channel === 'keyword') existing.keywordScore = contribution;
+          if (channel === 'graph') existing.graphScore = contribution;
+          fused.set(id, existing);
+        });
+      };
+      addChannel(keywordIds, 'keyword');
+      addChannel(semanticIds, 'semantic');
+      addChannel(graphIds, 'graph');
+
+      const ranked = [...fused.values()].sort((a, b) => b.score - a.score).slice(0, topK);
+
+      // ── Enrich to Memory + assign matchType ──────────────────────────
+      const enriched: HybridSearchResult[] = [];
+      for (const f of ranked) {
+        const memory = await deps.structured.getMemory(f.memoryId);
+        if (!memory) continue;
+        const channelCount =
+          (f.keywordScore > 0 ? 1 : 0) +
+          (f.semanticScore > 0 ? 1 : 0) +
+          (f.graphScore > 0 ? 1 : 0);
+        let matchType: HybridSearchResult['matchType'];
+        if (channelCount > 1) matchType = 'multi';
+        else if (f.keywordScore > 0) matchType = 'keyword';
+        else if (f.semanticScore > 0) matchType = 'semantic';
+        else matchType = 'graph';
+        enriched.push({
+          memory,
+          score: f.score,
+          semanticScore: f.semanticScore,
+          keywordScore: f.keywordScore,
+          graphScore: f.graphScore,
+          matchType,
+        });
+      }
+
+      // ── Optional reranker ────────────────────────────────────────────
+      if (input.rerank && deps.reranker) {
+        try {
+          const reranked = await deps.reranker.rerank(
+            input.query,
+            enriched.map((r) => ({ ...r, text: r.memory.content })),
+            { topK },
+          );
+          deps.logger.debug('arcana.retrieve.hybridSearch.reranked', { count: reranked.length });
+          return makeEnvelope(reranked.map(({ text: _ignored, ...rest }) => rest));
+        } catch (err) {
+          deps.logger.debug('arcana.retrieve.hybridSearch.rerank-failed', {
+            error: (err as Error).message,
+          });
+        }
+      }
+
+      return makeEnvelope(enriched);
     },
 
     async getEntityProfile(entityId: string): Promise<QueryResult<EntityProfile | null>> {
@@ -146,12 +319,12 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
       );
 
       // 3. Score each memory
-      type ScoredMemory = { memory: Memory; score: number };
+      type ScoredMemory = { memory: Memory; score: number; viaGraph: boolean };
       const scored: ScoredMemory[] = [];
 
       for (const memory of activeMemories) {
         if (words.length === 0) {
-          scored.push({ memory, score: 0 });
+          scored.push({ memory, score: 0, viaGraph: false });
           continue;
         }
         const haystack =
@@ -163,7 +336,7 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
         const matchCount = words.filter((w) => haystack.includes(w)).length;
         const score = matchCount / words.length;
         if (score > 0) {
-          scored.push({ memory, score });
+          scored.push({ memory, score, viaGraph: false });
         }
       }
 
@@ -183,7 +356,7 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
               const neighborMemory = activeMemories.find((m) => m.id === neighbor.id);
               if (neighborMemory) {
                 seenIds.add(neighbor.id);
-                expansions.push({ memory: neighborMemory, score: 0 });
+                expansions.push({ memory: neighborMemory, score: 0, viaGraph: true });
               }
             }
           }
@@ -201,6 +374,10 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
       const results: HybridSearchResult[] = topResults.map((s) => ({
         memory: s.memory,
         score: s.score,
+        keywordScore: s.viaGraph ? 0 : s.score,
+        semanticScore: 0,
+        graphScore: s.viaGraph ? s.score : 0,
+        matchType: s.viaGraph ? 'graph' : 'keyword',
         why: 'text-match (structured-only, no FTS5)',
       }));
 

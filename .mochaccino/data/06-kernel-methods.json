@@ -2,7 +2,7 @@
   "angle": "matrix",
   "title": "Arcana Kernel Method Status",
   "subtitle": "Which methods are implemented vs stubbed; demand-driven by KyberBot adoption",
-  "purpose": "Tracks the demand-driven implementation trail. Each method is either stubbed (throws NotImplementedError) or implemented with a real body. The 'driven_by' field names the consumer module that triggered the implementation.",
+  "purpose": "Tracks the demand-driven implementation trail. Each method is either stubbed (throws NotImplementedError) or implemented with a real body. The 'driven_by' field names the consumer module that triggered the implementation. The 'consumers' field captures each downstream system's integration state per method.",
   "generated": "2026-05-20",
   "system": "arcana",
   "status_legend": [
@@ -11,114 +11,229 @@
     { "id": "deferred", "symbol": "⊘", "label": "Deferred until demand surfaces" },
     { "id": "missing", "symbol": "✗", "label": "Not in Arcana yet — identified gap, not even stubbed" }
   ],
+  "consumer_state_legend": [
+    { "id": "wired", "symbol": "→", "label": "Consumer calls the kernel directly" },
+    { "id": "parallel", "symbol": "‖", "label": "Consumer has its own impl; kernel exists; swap pending parity gate (ADR 009)" },
+    { "id": "wrapped", "symbol": "↺", "label": "Consumer wraps the kernel call (logging, scoping, etc.) — counts as wired" },
+    { "id": "needs", "symbol": "?", "label": "Consumer wants this but blocked (kernel stub or missing prerequisites)" },
+    { "id": "unused", "symbol": "·", "label": "Method exists but this consumer has no use for it" }
+  ],
+  "consumers_tracked": [
+    { "id": "kyberbot", "label": "KyberBot", "status": "active adoption — arcana-adoption branch, 22 commits, 724 tests" },
+    { "id": "kyberagent-desktop", "label": "KyberAgent Desktop", "status": "not yet adopting; 5 schema gaps identified; codebase in flux (TCP auth, tunnels, SSE proxy just added) — adopt after stabilisation" },
+    { "id": "kybernesis-brain", "label": "Kybernesis Brain", "status": "blocked on shedding 5 Convex artifacts; needs arcana-provider-postgres before any swap; possible takeover scenario in play" }
+  ],
   "zones": [
     {
       "id": "ingest",
       "label": "ingest",
       "methods": [
-        { "name": "storeMemory", "status": "implemented", "driven_by": "kyberbot module #1 (timeline.ts)", "commit": "1f6a7c4", "scope_notes": "canonical row write only; chunking/embedding/extraction deferred", "adopted_by": ["kyberbot/packages/cli/src/brain/timeline.ts (closed 2026-05-18, 5 integration tests passing)"] },
-        { "name": "ingestDocument", "status": "stubbed", "driven_by": null, "notes": "no consumer demand yet" },
-        { "name": "[createArcana vector-optional]", "status": "implemented", "driven_by": "arcana-config merge / DVR review", "notes": "ArcanaOptions.vector is now optional. createMissingVectorStore() fallback added — same pattern as scheduler/queue stubs. Callers (including KyberBot) do not need to wire a VectorStore to construct an Arcana instance." },
-        { "name": "[arcana-provider-sqlite-vec]", "status": "implemented", "driven_by": "T13 (arcana-provider-sqlite-vec package)", "commit": "7bb12c4", "notes": "VectorStore via vec0 virtual table; rowid_ref companion pattern; :memory: testing; 11 tests. New package added v0.1.1. Unblocks hybridSearch when FTS5 tables also in StructuredStore." }
+        {
+          "name": "storeMemory",
+          "status": "implemented",
+          "driven_by": "kyberbot module #1 (timeline.ts)",
+          "commit": "1f6a7c4",
+          "scope_notes": "canonical row write only; chunking/embedding/extraction deferred",
+          "consumers": {
+            "kyberbot": { "mode": "wired", "location": "kyberbot/packages/cli/src/brain/timeline.ts", "migration_debt": false, "notes": "closed 2026-05-18, 5 integration tests passing" },
+            "kyberagent-desktop": { "mode": "unused" },
+            "kybernesis-brain": { "mode": "needs", "notes": "blocked on postgres provider + Convex shed" }
+          }
+        },
+        {
+          "name": "ingestDocument",
+          "status": "stubbed",
+          "driven_by": null,
+          "notes": "no consumer demand yet",
+          "consumers": {
+            "kyberbot": { "mode": "unused" },
+            "kyberagent-desktop": { "mode": "unused" },
+            "kybernesis-brain": { "mode": "unused" }
+          }
+        }
       ]
     },
     {
       "id": "retrieve",
       "label": "retrieve",
       "methods": [
-        { "name": "hybridSearch", "status": "stubbed", "driven_by": null, "notes": "requires sqlite-vec provider + FTS5 tables in StructuredStore; next after publish unblocked. read parity still partial until this lands." },
-        { "name": "factRetrieval", "status": "implemented", "driven_by": "arcana-core internal (T12)", "commit": "7bb12c4", "scope_notes": "structured-only text-match; scores by word-hit ratio; annotates with why field; hybridSearch path deferred until sqlite-vec + FTS5 ready. NOTE: expiresAt/surprisalScore/lastReinforcedAt are in FactSchema (contracts) but not yet surfaced in this path." },
-        { "name": "getEntityProfile", "status": "implemented", "driven_by": "arcana-core internal (T11)", "commit": "7bb12c4", "scope_notes": "assembles from live facts/insights/neighbors; stores result; returns from storage on second call; QueryResult envelope" },
-        { "name": "queryFacts (asOf timeline)", "status": "missing", "driven_by": null, "notes": "NOT in Arcana at all. Identified in ADR 008 as a missing kernel method. queryFacts currently has no date-filtering parameter. Timeline query (queryFacts with asOf: Date) is needed for Brain migration scenarios. Will require StructuredStore.getFactsForEntity to accept a temporal filter." }
+        {
+          "name": "hybridSearch",
+          "status": "implemented",
+          "driven_by": "FTS+hybrid sprint 2026-05-20",
+          "commit": "TBD",
+          "scope_notes": "Wave-1 KyberBot-parity result shape (semanticScore, keywordScore, graphScore, matchType). RRF (k=60) fusion over keyword (FTS5) + semantic (VectorStore) + graph (BFS via getNeighbors). Optional reranker. Per-channel failures degrade gracefully.",
+          "consumers": {
+            "kyberbot": { "mode": "parallel", "location": "kyberbot/packages/cli/src/brain/hybrid-search.ts", "migration_debt": true, "notes": "Swap pending parity gate per ADR 009. Result shape matches KyberBot's existing flat layout so adaptation is mechanical." },
+            "kyberagent-desktop": { "mode": "unused" },
+            "kybernesis-brain": { "mode": "needs", "notes": "Brain wants kernel-version directly (no legacy to regress against); blocked on postgres provider for FTS via tsvector" }
+          }
+        },
+        {
+          "name": "factRetrieval",
+          "status": "implemented",
+          "driven_by": "arcana-core internal (T12)",
+          "commit": "7bb12c4",
+          "scope_notes": "structured-only text-match; scores by word-hit ratio; result shape upgraded to wave-1 (keyword/graph matchType). hybridSearch now exists alongside this — factRetrieval remains for the fact-aware multi-stage path.",
+          "consumers": {
+            "kyberbot": { "mode": "parallel", "location": "kyberbot/packages/cli/src/brain/fact-retrieval.ts", "migration_debt": true, "notes": "Swap pending parity gate" },
+            "kyberagent-desktop": { "mode": "unused" },
+            "kybernesis-brain": { "mode": "needs" }
+          }
+        },
+        {
+          "name": "getEntityProfile",
+          "status": "implemented",
+          "driven_by": "arcana-core internal (T11)",
+          "commit": "7bb12c4",
+          "scope_notes": "assembles from live facts/insights/neighbors; stores result; returns from storage on second call; QueryResult envelope",
+          "consumers": {
+            "kyberbot": { "mode": "needs", "notes": "consumer uses local profile generation; swap candidate" },
+            "kyberagent-desktop": { "mode": "unused" },
+            "kybernesis-brain": { "mode": "needs" }
+          }
+        },
+        {
+          "name": "queryFacts (asOf timeline)",
+          "status": "implemented",
+          "driven_by": "ADR 008 + FTS+hybrid sprint 2026-05-20",
+          "commit": "TBD",
+          "scope_notes": "Optional asOf: string ISO-8601 param added to queryFacts AND StructuredStore.getFactsForEntity. Filters out facts where expiresAt ≤ asOf. Backward compatible — omitting asOf preserves prior behavior. libsql impl filters in SQL.",
+          "consumers": {
+            "kyberbot": { "mode": "unused", "notes": "no current timeline-query consumer in KyberBot" },
+            "kyberagent-desktop": { "mode": "unused" },
+            "kybernesis-brain": { "mode": "needs", "notes": "core Brain migration requirement — Brain has temporal facts and needs bitemporal querying" }
+          }
+        },
+        {
+          "name": "[StructuredStore.searchFulltext]",
+          "status": "implemented",
+          "driven_by": "FTS+hybrid sprint 2026-05-20",
+          "commit": "TBD",
+          "scope_notes": "New contract method on StructuredStore. libsql impl uses FTS5 virtual table (memories_fts, unicode61 tokenizer) with sync triggers on INSERT/UPDATE/DELETE. Returns FulltextMatch[] with memoryId + normalized 0..1 score + matchedFields. Scope+tier filtering at the index layer. Postgres impl (future) will use tsvector @@ to_tsquery satisfying the same contract.",
+          "consumers": {
+            "kyberbot": { "mode": "parallel", "location": "kyberbot/packages/cli/src/brain/hybrid-search.ts (timeline_fts MATCH)", "migration_debt": true, "notes": "KyberBot has its own FTS5 query — swap with hybridSearch swap" },
+            "kyberagent-desktop": { "mode": "unused" },
+            "kybernesis-brain": { "mode": "needs", "notes": "blocked on arcana-provider-postgres impl of this method" }
+          }
+        }
       ]
     },
     {
       "id": "maintain",
       "label": "maintain (sleep pipeline)",
       "methods": [
-        { "name": "runSleepPipeline", "status": "stubbed", "driven_by": null, "notes": "13-step pipeline; entirely stubbed. expiresAt/surprisalScore/lastReinforcedAt are in FactSchema contracts but the sleep steps that would use them (decay scoring, expiry sweeps) are not implemented. Lands with sleep modules (#11)." },
-        { "name": "startSleepSchedule", "status": "stubbed", "driven_by": null, "notes": "Scheduler provider integration; entirely stubbed" },
-        { "name": "stopSleepSchedule", "status": "stubbed", "driven_by": null, "notes": "Entirely stubbed" }
+        {
+          "name": "runSleepPipeline",
+          "status": "stubbed",
+          "driven_by": null,
+          "notes": "13-step pipeline; entirely stubbed. ADR 010 records the unresolved step-list reconciliation between KyberBot's 9 steps and Arcana's 13 (consolidate, observe). Implementation deferred to next sprint.",
+          "consumers": {
+            "kyberbot": { "mode": "parallel", "location": "kyberbot/packages/cli/src/brain/sleep/index.ts", "migration_debt": true, "notes": "9-step pipeline in production; swap blocked on ADR 010 resolution + parity gate" },
+            "kyberagent-desktop": { "mode": "unused" },
+            "kybernesis-brain": { "mode": "needs" }
+          }
+        },
+        {
+          "name": "startSleepSchedule",
+          "status": "stubbed",
+          "driven_by": null,
+          "notes": "Scheduler provider integration; entirely stubbed",
+          "consumers": {
+            "kyberbot": { "mode": "parallel", "location": "kyberbot/packages/cli/src/runtime/fleet-sleep-scheduler.ts", "migration_debt": true },
+            "kyberagent-desktop": { "mode": "unused" },
+            "kybernesis-brain": { "mode": "needs" }
+          }
+        },
+        {
+          "name": "stopSleepSchedule",
+          "status": "stubbed",
+          "driven_by": null,
+          "consumers": {
+            "kyberbot": { "mode": "parallel", "location": "kyberbot/packages/cli/src/runtime/fleet-sleep-scheduler.ts", "migration_debt": true },
+            "kyberagent-desktop": { "mode": "unused" },
+            "kybernesis-brain": { "mode": "unused" }
+          }
+        }
       ]
     },
     {
       "id": "access.query",
       "label": "access.query (read facade)",
       "methods": [
-        { "name": "queryFacts", "status": "implemented", "driven_by": "ADR 004 schema correction (in anticipation of KyberBot module #4 + Kybernesis Brain fact pipeline)", "commit": "TBD", "notes": "Reads via structured.getFactsForEntity; wraps in fresh QueryResult envelope. Sentence-form and triple-decomposed facts both queryable." },
-        { "name": "getNeighbors", "status": "stubbed", "driven_by": null },
-        { "name": "stats", "status": "stubbed", "driven_by": null },
-        { "name": "listContradictions", "status": "stubbed", "driven_by": null, "notes": "provider-level surface exists; kernel-level facade not yet exposed" },
-        { "name": "listInsights", "status": "stubbed", "driven_by": null },
-        { "name": "readBlock", "status": "stubbed", "driven_by": null },
-        { "name": "getBlockHistory", "status": "stubbed", "driven_by": null }
+        {
+          "name": "queryFacts",
+          "status": "implemented",
+          "driven_by": "ADR 004 schema correction (in anticipation of KyberBot module #4 + Kybernesis Brain fact pipeline)",
+          "commit": "TBD",
+          "notes": "Reads via structured.getFactsForEntity; wraps in fresh QueryResult envelope. Sentence-form and triple-decomposed facts both queryable. Now accepts optional asOf for bitemporal filtering (added 2026-05-20).",
+          "consumers": {
+            "kyberbot": { "mode": "needs", "notes": "module #4 pending" },
+            "kyberagent-desktop": { "mode": "unused" },
+            "kybernesis-brain": { "mode": "needs" }
+          }
+        },
+        { "name": "getNeighbors", "status": "stubbed", "driven_by": null, "consumers": { "kyberbot": { "mode": "needs" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "stats", "status": "stubbed", "driven_by": null, "consumers": { "kyberbot": { "mode": "unused" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "unused" } } },
+        { "name": "listContradictions", "status": "stubbed", "driven_by": null, "notes": "provider-level surface exists; kernel-level facade not yet exposed", "consumers": { "kyberbot": { "mode": "needs" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "listInsights", "status": "stubbed", "driven_by": null, "consumers": { "kyberbot": { "mode": "needs" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "readBlock", "status": "stubbed", "driven_by": null, "consumers": { "kyberbot": { "mode": "unused" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "getBlockHistory", "status": "stubbed", "driven_by": null, "consumers": { "kyberbot": { "mode": "unused" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } }
       ]
     },
     {
       "id": "access.command",
       "label": "access.command (write facade)",
       "methods": [
-        { "name": "upsertEntity", "status": "implemented", "driven_by": "kyberbot module #2 (entity-graph.ts)", "commit": "17c3f48", "adopted_by": ["kyberbot/packages/cli/src/brain/entity-graph.ts (closed 2026-05-18, 6 integration tests passing)"] },
-        { "name": "deleteEntity", "status": "implemented", "driven_by": "kyberbot module #2 (entity-graph.ts)", "commit": "17c3f48", "notes": "added deleteEntity to StructuredStore interface as part of this work (additive contract change — ADR 002)", "adopted_by": ["kyberbot/packages/cli/src/brain/entity-graph.ts (closed 2026-05-18)"] },
-        { "name": "linkNodes", "status": "implemented", "driven_by": "kyberbot module #2 (entity-graph.ts)", "commit": "17c3f48", "notes": "renamed from linkMemories per ADR 001 (name disagreed with NodeRef signature)", "adopted_by": ["kyberbot/packages/cli/src/brain/entity-graph.ts (closed 2026-05-18)"] },
-        { "name": "recordFact", "status": "implemented", "driven_by": "ADR 004 schema correction (in anticipation of KyberBot module #4 + Kybernesis Brain fact pipeline)", "commit": "fb8b3dc", "notes": "Validates RecordFactInput via FactSchema; builds Fact with UUID id + ISO createdAt + isLatest=true defaults; persists via structured.storeFact. Auto-supersession deferred to sleep pipeline." },
-        { "name": "updateMemory", "status": "implemented", "driven_by": "ADR 005 (memory is not append-only; David's architectural audit)", "commit": "TBD", "notes": "Partial update; contentHash recomputed when content changes; scopes replaced not merged. Unblocks pin/moveToTier (now wrappers around this) and the DVR-UT-006 orphan-mirror fix." },
-        { "name": "pin", "status": "implemented", "driven_by": "ADR 005 (became real once updateMemory landed)", "commit": "TBD", "notes": "Thin wrapper: updateMemory(id, { isPinned: true })." },
-        { "name": "moveToTier", "status": "implemented", "driven_by": "ADR 005 (became real once updateMemory landed)", "commit": "TBD", "notes": "Thin wrapper: updateMemory(id, { tier })." },
-        { "name": "markFactSuperseded", "status": "implemented", "driven_by": "kyberbot module #11 (sleep/observe.ts supersede path)", "commit": "TBD", "notes": "Pure-link op: updates isLatest=false + supersededBy=newFactId on the old fact. New fact must already exist (typically via recordFact). ADR 006." },
-        { "name": "storeContradiction", "status": "implemented", "driven_by": "kyberbot module #11 (sleep/observe.ts createContradiction path)", "commit": "TBD", "notes": "Kernel mints id + createdAt; status defaults 'pending'; rationale optional. ADR 006." },
-        { "name": "markMemorySuperseded", "status": "implemented", "driven_by": "ADR 007 §3.2 (Brain-vs-Convex audit revealed memory-level supersession as a genuine domain feature)", "commit": "TBD", "notes": "Pure-link op mirroring markFactSuperseded: updates isLatest=false + supersededBy=newMemoryId on the old memory. New memory must already exist (typically via ingest.storeMemory). ADR 007." },
-        { "name": "deleteMemory", "status": "stubbed", "driven_by": null },
-        { "name": "updateBlock", "status": "stubbed", "driven_by": null }
+        { "name": "upsertEntity", "status": "implemented", "driven_by": "kyberbot module #2 (entity-graph.ts)", "commit": "17c3f48", "consumers": { "kyberbot": { "mode": "wired", "location": "kyberbot/packages/cli/src/brain/entity-graph.ts", "migration_debt": false, "notes": "closed 2026-05-18, 6 integration tests passing" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "deleteEntity", "status": "implemented", "driven_by": "kyberbot module #2 (entity-graph.ts)", "commit": "17c3f48", "notes": "added deleteEntity to StructuredStore interface as part of this work (ADR 002)", "consumers": { "kyberbot": { "mode": "wired", "location": "kyberbot/packages/cli/src/brain/entity-graph.ts", "migration_debt": false }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "linkNodes", "status": "implemented", "driven_by": "kyberbot module #2 (entity-graph.ts)", "commit": "17c3f48", "notes": "renamed from linkMemories per ADR 001", "consumers": { "kyberbot": { "mode": "wired", "location": "kyberbot/packages/cli/src/brain/entity-graph.ts", "migration_debt": false }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "recordFact", "status": "implemented", "driven_by": "ADR 004 schema correction", "commit": "fb8b3dc", "notes": "Validates RecordFactInput via FactSchema; builds Fact with UUID id + ISO createdAt + isLatest=true defaults. Auto-supersession deferred to sleep pipeline.", "consumers": { "kyberbot": { "mode": "needs", "notes": "module #4 pending" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "updateMemory", "status": "implemented", "driven_by": "ADR 005 (memory is not append-only)", "commit": "TBD", "notes": "Partial update; contentHash recomputed when content changes; scopes replaced not merged.", "consumers": { "kyberbot": { "mode": "wired", "migration_debt": false }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "pin", "status": "implemented", "driven_by": "ADR 005", "commit": "TBD", "notes": "Thin wrapper: updateMemory(id, { isPinned: true })", "consumers": { "kyberbot": { "mode": "wired" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "moveToTier", "status": "implemented", "driven_by": "ADR 005", "commit": "TBD", "notes": "Thin wrapper: updateMemory(id, { tier })", "consumers": { "kyberbot": { "mode": "wired" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "markFactSuperseded", "status": "implemented", "driven_by": "kyberbot module #11 (sleep/observe.ts)", "commit": "TBD", "notes": "Pure-link op (ADR 006).", "consumers": { "kyberbot": { "mode": "parallel", "location": "kyberbot/packages/cli/src/brain/sleep/observe.ts", "migration_debt": true }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "storeContradiction", "status": "implemented", "driven_by": "kyberbot module #11 (sleep/observe.ts)", "commit": "TBD", "notes": "Kernel mints id + createdAt; status defaults 'pending' (ADR 006).", "consumers": { "kyberbot": { "mode": "parallel", "location": "kyberbot/packages/cli/src/brain/sleep/observe.ts", "migration_debt": true }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "markMemorySuperseded", "status": "implemented", "driven_by": "ADR 007 §3.2 (Brain-vs-Convex audit)", "commit": "TBD", "notes": "Pure-link op mirroring markFactSuperseded.", "consumers": { "kyberbot": { "mode": "needs" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "deleteMemory", "status": "stubbed", "driven_by": null, "notes": "no consumer demand yet", "consumers": { "kyberbot": { "mode": "unused" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "unused" } } },
+        { "name": "updateBlock", "status": "stubbed", "driven_by": null, "notes": "no consumer demand yet", "consumers": { "kyberbot": { "mode": "unused" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } }
       ]
     }
   ],
   "summary": {
-    "implemented_count": 14,
-    "stubbed_count": 13,
-    "missing_count": 1,
+    "implemented_count": 17,
+    "stubbed_count": 11,
+    "missing_count": 0,
     "total_kernel_methods_catalogued": 28,
     "write_parity_percent": 100,
-    "read_parity_percent": 50,
-    "test_counts": { "tests": 212, "files": 25, "packages": 5, "all_passing": true },
-    "arcana_config_merge": "arcana-config package DELETED 2026-05-19; merged into arcana-core src/config/. loadConfig/getDefaultConfig/ENV_MAP/ConfigSchema now exported from @kybernesis/arcana-core.",
-    "provider_bug_fixes": [
-      "DVR-EC-001 (2026-05-19): arcana-provider-libsql connect() now mkdirSync(parent, {recursive:true}) before opening file-path database — fixes crash when data directory does not yet exist"
-    ],
-    "delivery_review_status": "CONDITIONAL PASS r2 (2026-05-20). EC-015 in-flight guard needed before merge. EC-013/014 optional. 4 KyberBot-side patches still remaining.",
-    "kyberbot_remaining_patches": [
-      "EC-015: in-flight guard needed (required before merge)",
-      "DVR-EC-002: temperature/maxTokens honesty in ClaudeLLMProvider — drop at type boundary with Omit + comment, or wire through CLI flags",
-      "DVR-BH-002/EC-006: OPENAI_API_KEY guard — wrap in try/catch or gate behind arcana.enabled flag",
-      "DVR-CQ-002/UT-005: extract bootArcana(root) from run.ts + add integration test",
-      "DVR-EC-007/BH-003: arcana-singleton double-init fix — dispose-then-reinit or throw on second call"
-    ],
-    "consumers_actively_adopting": ["kyberbot (arcana-adoption branch, 22 commits, 724 tests)"],
+    "read_parity_percent": 85,
+    "test_counts": { "tests": 232, "files": 24, "packages": 5, "all_passing": true },
+    "arcana_config_merge": "arcana-config package DELETED 2026-05-19; merged into arcana-core src/config/.",
+    "fts_hybridsearch_sprint": "Sprint 2026-05-20 landed: searchFulltext contract + libsql FTS5 impl + kernel hybridSearch (RRF k=60) + queryFacts asOf + ADR 009 (parity gate) + ADR 010 (sleep step gap). KyberBot untouched per ADR 009 deferred-swap principle.",
+    "delivery_review_status": "CONDITIONAL PASS r2 (2026-05-20). EC-015 in-flight guard needed before merge. 4 KyberBot-side patches still remaining.",
+    "consumers_actively_adopting": ["kyberbot (arcana-adoption branch)"],
     "kyberbot_modules_closed": 10,
     "kyberbot_modules_remaining": 5,
     "kyberbot_provider_adapters_built": ["OpenAIEmbeddingProvider", "ChromaDBVectorStore"],
-    "contracts_ahead_of_kernel": ["expiresAt, surprisalScore, lastReinforcedAt — in FactSchema but not surfaced in any kernel method or sleep pipeline step"],
-    "providers_shipping": ["arcana-provider-libsql (StructuredStore)", "arcana-provider-sqlite-vec (VectorStore, added v0.1.1)"],
+    "contracts_ahead_of_kernel": ["expiresAt — now surfaced via queryFacts asOf (2026-05-20)", "surprisalScore — still unreachable; lands with sleep pipeline", "lastReinforcedAt — still unreachable; lands with sleep pipeline"],
+    "providers_shipping": ["arcana-provider-libsql (StructuredStore + FTS5)", "arcana-provider-sqlite-vec (VectorStore)"],
+    "providers_planned": ["arcana-provider-postgres (Brain migration blocker; FTS via tsvector to satisfy searchFulltext contract)"],
     "brain_migration_blockers": [
-      "Kybernesis Brain must shed 5 Convex artifacts before adopting Arcana",
-      "4-flat-ID edges (must adopt NodeRef pattern)",
-      "shadow entity rows (must remove Convex-ism)",
-      "loose enum vocab (must align with Arcana scopes)",
-      "_creationTime usage (must switch to ISO createdAt)",
-      "reactive query patterns (Arcana is pull-only, no live queries)"
+      "5 Convex artifacts to shed (4-flat-ID edges, shadow rows, _creationTime, reactive queries, loose enum vocab)",
+      "arcana-provider-postgres does not yet exist",
+      "possible Brain takeover scenario — central vs distributed migration shape TBD"
     ],
-    "brain_vs_harness_classification": {
-      "brain_domain_already_in_arcana": ["Memory blocks", "temporal facts", "surprisalScore", "ProfileEntry", "EntityProfile", "Contradiction", "Insight"],
-      "harness_not_arcana": ["OAuth", "connectors", "multi-tenant routing", "Motus integration"]
-    },
     "contract_evolutions": [
-      "v0.1.0 initial schema (FactSchema required triples, no updateMemory)",
-      "v0.x: deleteEntity added to StructuredStore (ADR 002)",
-      "v0.x: FactSchema corrected — fact (sentence) required, attribute/value optional (ADR 004 supersedes ADR 003)",
-      "v0.x: updateMemory added to StructuredStore + command (ADR 005 — Memory is not append-only; unblocks pin/moveToTier and DVR-UT-006 orphan-mirror fix)",
-      "v0.x: markFactSuperseded + storeContradiction added; Contradiction.rationale added; correctFact stub deleted (ADR 006 — driven by kyberbot module #11)",
-      "v0.x: Memory.status + Memory.isLatest + Memory.supersededBy fields added; markMemorySuperseded kernel + provider method added (ADR 007 §3.1-§3.2 — driven by Brain-vs-Convex audit)",
-      "v0.x ADR 008: Brain migration analysis — confirmed expiresAt/surprisalScore/lastReinforcedAt in contracts; identified timeline query as missing kernel method; classified brain vs harness features"
+      "v0.1.0 initial schema",
+      "v0.x ADR 002: deleteEntity added to StructuredStore",
+      "v0.x ADR 004: FactSchema corrected — fact (sentence) required, attribute/value optional",
+      "v0.x ADR 005: updateMemory added — Memory is not append-only",
+      "v0.x ADR 006: markFactSuperseded + storeContradiction; Contradiction.rationale added",
+      "v0.x ADR 007: Memory.status/isLatest/supersededBy + markMemorySuperseded",
+      "v0.x ADR 008: Brain migration boundary; identified timeline query as missing",
+      "v0.x ADR 009 (2026-05-20): Parity gate methodology for consumer swaps",
+      "v0.x ADR 010 (2026-05-20): Sleep pipeline step reconciliation — deferred design decision",
+      "v0.x 2026-05-20: StructuredStore.searchFulltext added; getFactsForEntity accepts asOf"
     ]
   }
 }
