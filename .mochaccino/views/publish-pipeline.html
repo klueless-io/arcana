@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arcana // Publish Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg-primary:   #0d1117;
+    --bg-secondary: #111827;
+    --bg-tertiary:  #161d2d;
+    --fg-primary:   #f1f5f9;
+    --fg-secondary: #94a3b8;
+    --fg-tertiary:  #64748b;
+    --fg-muted:     #475569;
+    --border-color: #1e2a3a;
+    --border-hover: #2d3f5a;
+    --accent-emerald: #10b981;
+    --accent-cyan:  #22d3ee;
+    --accent-teal:  #14b8a6;
+    --status-success: #10b981;
+    --status-warning: #f59e0b;
+    --status-error: #ef4444;
+    --font-mono: 'Space Mono', 'SF Mono', monospace;
+    --font-sans: 'Inter', -apple-system, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg-primary); color: var(--fg-secondary); font-family: var(--font-mono); font-size: 13px; line-height: 1.6; padding: 32px; }
+  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: var(--fg-muted); }
+
+  .header { margin-bottom: 32px; }
+  .wordmark { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 16px; }
+  .wordmark em { color: var(--accent-emerald); font-style: normal; }
+  h1 { font-size: 22px; font-weight: 700; color: var(--fg-primary); letter-spacing: -0.02em; }
+  .tagline { font-family: var(--font-sans); font-weight: 300; font-size: 12px; color: var(--fg-tertiary); margin-top: 6px; }
+
+  /* section title */
+  .section-title { font-size: 11px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent-emerald); padding: 14px 0 12px; }
+
+  /* lane */
+  .lane { border: 1px solid var(--border-color); margin-bottom: 1px; background: var(--bg-secondary); }
+  .lane-header { display: flex; align-items: center; gap: 14px; padding: 14px 20px; border-bottom: 1px solid var(--border-color); }
+  .lane-label { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--fg-primary); flex: 1; }
+  .lane-status { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; padding: 2px 10px; border: 1px solid; }
+  .ls-done     { color: var(--accent-emerald); border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.06); }
+  .ls-partial  { color: var(--status-warning); border-color: rgba(245,158,11,0.4);  background: rgba(245,158,11,0.06); }
+  .ls-future   { color: var(--fg-muted);       border-color: var(--border-color);   background: transparent; }
+
+  /* pipeline steps */
+  .pipeline { display: flex; gap: 0; overflow-x: auto; padding: 20px; align-items: flex-start; flex-wrap: wrap; gap: 0; }
+  .step-wrap { display: flex; align-items: center; gap: 0; }
+  .step { padding: 10px 14px; min-width: 130px; max-width: 150px; border: 1px solid var(--border-color); }
+  .step-status { width: 8px; height: 8px; border: 1.5px solid; margin-bottom: 8px; }
+  .ss-green   { background: var(--accent-emerald); border-color: var(--accent-emerald); }
+  .ss-partial { background: var(--status-warning); border-color: var(--status-warning); }
+  .ss-wired   { background: rgba(34,211,238,0.3);  border-color: var(--accent-cyan); }
+  .ss-missing { background: transparent; border-color: var(--fg-muted); }
+  .step-label { font-family: var(--font-mono); font-size: 10px; color: var(--fg-secondary); word-break: break-word; line-height: 1.4; margin-bottom: 4px; }
+  .step-note  { font-family: var(--font-sans); font-weight: 300; font-size: 10px; color: var(--fg-muted); line-height: 1.5; margin-top: 4px; }
+  .arrow { color: var(--fg-muted); padding: 0 4px; font-size: 14px; align-self: center; }
+
+  /* issue callout */
+  .issue-row { display: flex; gap: 1px; background: var(--border-color); margin: 0 0 1px; }
+  .issue-cell { background: var(--bg-tertiary); padding: 10px 16px; flex: 1; }
+  .issue-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--status-error); margin-bottom: 4px; }
+  .issue-body { font-family: var(--font-sans); font-weight: 300; font-size: 11px; color: var(--fg-muted); line-height: 1.6; }
+  .issue-body code { font-family: var(--font-mono); font-size: 10px; color: var(--accent-cyan); }
+
+  /* fix callout */
+  .fix-box { background: rgba(16,185,129,0.04); border: 1px solid rgba(16,185,129,0.2); padding: 16px 20px; margin: 0 0 1px; }
+  .fix-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--accent-emerald); margin-bottom: 8px; }
+  .fix-command { font-family: var(--font-mono); font-size: 12px; color: var(--accent-cyan); background: var(--bg-tertiary); padding: 10px 14px; border: 1px solid var(--border-color); display: inline-block; }
+
+  /* packages strip */
+  .pkg-strip { display: flex; flex-wrap: wrap; gap: 1px; background: var(--border-color); margin-bottom: 1px; }
+  .pkg-item { background: var(--bg-secondary); padding: 10px 16px; }
+  .pkg-name { font-family: var(--font-mono); font-size: 11px; color: var(--fg-primary); }
+  .pkg-ver  { font-size: 10px; letter-spacing: 0.5px; color: var(--accent-emerald); border: 1px solid rgba(16,185,129,0.3); padding: 1px 6px; display: inline-block; margin-top: 3px; }
+  .pkg-new  { font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--accent-cyan); border: 1px solid rgba(34,211,238,0.3); padding: 1px 6px; display: inline-block; margin-left: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="wordmark">// <em>ARCANA</em> · PUBLISH PIPELINE</div>
+  <h1>Publish Pipeline</h1>
+  <div class="tagline">v0.1.0 partial · v0.1.1 complete (2026-05-20) · CI-driven path defined but not wired</div>
+</div>
+
+<div class="section-title">// PUBLISHED PACKAGES</div>
+
+<div class="pkg-strip">
+  <div class="pkg-item">
+    <div class="pkg-name">@kybernesis/arcana-contracts</div>
+    <div class="pkg-ver">v0.1.1</div>
+  </div>
+  <div class="pkg-item">
+    <div class="pkg-name">@kybernesis/arcana-core</div>
+    <div class="pkg-ver">v0.1.1</div>
+  </div>
+  <div class="pkg-item">
+    <div class="pkg-name">@kybernesis/arcana-testkit</div>
+    <div class="pkg-ver">v0.1.1</div>
+  </div>
+  <div class="pkg-item">
+    <div class="pkg-name">@kybernesis/arcana-provider-libsql</div>
+    <div class="pkg-ver">v0.1.1</div>
+  </div>
+  <div class="pkg-item">
+    <div class="pkg-name">@kybernesis/arcana-provider-sqlite-vec</div>
+    <div class="pkg-ver">v0.1.1</div>
+    <span class="pkg-new">new</span>
+  </div>
+</div>
+
+<div class="section-title">// V0.1.0 — MANUAL PUBLISH (PARTIAL)</div>
+
+<div class="lane">
+  <div class="lane-header">
+    <div class="lane-label">v0.1.0 — Manual publish via npm publish</div>
+    <div class="lane-status ls-partial">PARTIAL — do not rely on</div>
+  </div>
+  <div class="pipeline">
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-wired"></div>
+        <div class="step-label">bun run lint</div>
+        <div class="step-note">Script exists; passes vacuously</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-wired"></div>
+        <div class="step-label">bun run typecheck</div>
+        <div class="step-note">Guard skips tsc -b until tsconfig.json exists</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-green"></div>
+        <div class="step-label">bun run test</div>
+        <div class="step-note">Vitest passes; 212 tests as of v0.1.1</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-partial"></div>
+        <div class="step-label">npm publish contracts</div>
+        <div class="step-note">Attempted; workspace:* not rewritten</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-partial"></div>
+        <div class="step-label">npm publish core</div>
+        <div class="step-note">Attempted; workspace:* not rewritten</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-partial"></div>
+        <div class="step-label">npm publish testkit</div>
+        <div class="step-note">Attempted; workspace:* not rewritten</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-missing"></div>
+        <div class="step-label">npm publish libsql</div>
+        <div class="step-note">MISSED entirely in v0.1.0</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-missing"></div>
+        <div class="step-label">git tag v0.1.0</div>
+        <div class="step-note">Not tagged</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="issue-row">
+  <div class="issue-cell">
+    <div class="issue-label">Issue 1 — workspace:* not rewritten</div>
+    <div class="issue-body"><code>npm publish</code> bypasses pnpm's workspace protocol rewrite. Published manifests had literal <code>"workspace:*"</code> in dependencies — any consumer installing from npm got broken packages.</div>
+  </div>
+  <div class="issue-cell">
+    <div class="issue-label">Issue 2 — arcana-provider-libsql missed</div>
+    <div class="issue-body">The 4th package was not published at all in v0.1.0. No tag was created. The v0.1.0 release is unusable and should not be pinned by any consumer.</div>
+  </div>
+  <div class="issue-cell">
+    <div class="issue-label">Issue 3 — sqlite-vec did not exist yet</div>
+    <div class="issue-body"><code>arcana-provider-sqlite-vec</code> was not built until the v0.1.1 sprint. v0.1.0 only had 4 packages.</div>
+  </div>
+</div>
+
+<div class="section-title">// V0.1.1 — MANUAL PUBLISH (COMPLETE)</div>
+
+<div class="fix-box">
+  <div class="fix-label">Fix — use pnpm publish -r (rewrites workspace:* to real semver)</div>
+  <div class="fix-command">pnpm publish -r --filter='./packages/*' --access public</div>
+</div>
+
+<div class="lane">
+  <div class="lane-header">
+    <div class="lane-label">v0.1.1 — pnpm publish -r — all 5 packages — published 2026-05-20</div>
+    <div class="lane-status ls-done">COMPLETE</div>
+  </div>
+  <div class="pipeline">
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-green"></div>
+        <div class="step-label">npm login</div>
+        <div class="step-note">Browser OTP completed by user</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-green"></div>
+        <div class="step-label">pnpm publish -r</div>
+        <div class="step-note">All 5 packages · workspace:* rewritten · --access public</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-green"></div>
+        <div class="step-label">verify contracts</div>
+        <div class="step-note">npm view confirmed semver deps in manifest</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-green"></div>
+        <div class="step-label">verify sqlite-vec</div>
+        <div class="step-note">New package · live at v0.1.1</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-missing"></div>
+        <div class="step-label">git tag v0.1.1</div>
+        <div class="step-note">Not yet tagged — pending KyberBot merge</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-title">// V0.1.X+ — CI-DRIVEN (FUTURE)</div>
+
+<div class="lane">
+  <div class="lane-header">
+    <div class="lane-label">v0.1.x+ — publish.yml GitHub Actions (not wired)</div>
+    <div class="lane-status ls-future">NOT STARTED</div>
+  </div>
+  <div class="pipeline">
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-missing"></div>
+        <div class="step-label">ci.yml passes on tag</div>
+        <div class="step-note">lint + typecheck + test gate</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-missing"></div>
+        <div class="step-label">publish loop</div>
+        <div class="step-note">For each pkg in dep order: npm view → skip if exists, else publish</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-missing"></div>
+        <div class="step-label">idempotency</div>
+        <div class="step-note">Re-run on same tag is a no-op</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-missing"></div>
+        <div class="step-label">notify</div>
+        <div class="step-note">GitHub release + npm dist-tag latest</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
