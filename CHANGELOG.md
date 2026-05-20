@@ -7,6 +7,42 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## v0.2.1 — 2026-05-20
+
+### Added — `@kybernesis/arcana-core` (query-zone facades)
+- `query.getNeighbors(node, hops?)` — thin facade over `structured.getNeighbors`, wraps result in `QueryResult` envelope.
+- `query.listContradictions(status?)` — thin facade over `structured.listContradictions`. Respects optional status filter.
+- `query.listInsights(entityId?)` — thin facade over `structured.listInsights`. Respects optional entityId filter.
+
+### Hardened — `@kybernesis/arcana-provider-libsql`
+- `buildFtsQuery` now rejects inputs over 10 KB to bound memory + tokenizer cost. Surfaced by a Tier 2 read-only audit during this sprint (no exploit; defensive hardening).
+
+### Notes
+- Removes 3 stubs from `access.query` zone; matrix moves from 17 / 28 → 20 / 28 implemented.
+- KyberBot can also call `arcana.providers.structured.*` directly for any still-stubbed query method — the provider methods are implemented even when the kernel facade isn't yet exposed.
+
+## v0.2.0 — 2026-05-20
+
+### Added — `@kybernesis/arcana-contracts`
+- `StructuredStore.searchFulltext(query, opts?)` — new contract method. Provider-owned full-text index. Returns `FulltextMatch[]` with `memoryId`, normalised `score: 0..1`, and `matchedFields: FulltextField[]`.
+- `FulltextSearchOpts` — `{ scopes?, tier?, topK?, fields? }`; filtering happens at the index layer.
+- `FulltextMatch`, `FulltextField` types.
+- `StructuredStore.getFactsForEntity` accepts optional `asOf: string` (ISO 8601) for bitemporal valid-time filtering. Backward compatible.
+
+### Added — `@kybernesis/arcana-core`
+- `retrieve.hybridSearch` — real implementation. Reciprocal Rank Fusion (k=60) over three channels: keyword (via `searchFulltext`), semantic (via `VectorStore`), graph (BFS via `getNeighbors`). Per-channel failures degrade gracefully. Optional reranker via existing `RerankerProvider` interface.
+- `HybridSearchResult` shape evolved to wave-1 KyberBot-parity: `{ memory, score, semanticScore, keywordScore, graphScore, matchType, why? }`. `matchType: 'semantic' | 'keyword' | 'graph' | 'multi'`. Future wave-2 evolution to nested `channels` object deferred until consumers stabilise.
+- `query.queryFacts` accepts optional `asOf` parameter — kernel facade for bitemporal valid-time queries.
+
+### Added — `@kybernesis/arcana-provider-libsql`
+- `memories_fts` FTS5 virtual table (`unicode61` tokenizer) + sync triggers on INSERT/UPDATE/DELETE of `memories` rows.
+- `searchFulltext` implementation backed by FTS5 MATCH + bm25() ranking. Scope + tier filtering pushed into the SQL layer.
+
+### Documentation
+- [ADR 009](./docs/decisions/009-parity-gate-for-consumer-swaps.md) — Parity-gate methodology for consumer swaps. No consumer migrates from a working parallel impl to the kernel without a top-N overlap test (default ≥ 80%).
+- [ADR 010](./docs/decisions/010-sleep-pipeline-step-reconciliation.md) — Sleep pipeline step reconciliation. Records the `consolidate`/`observe` gap between KyberBot's 9 steps and Arcana's 13. Decision deferred.
+- `docs/plans/2026-05-20-fts-and-hybridsearch.md` — sprint plan capturing the wave-1 parity / wave-2 evolution principle.
+
 ### Added — `@kybernesis/arcana-contracts` (ADR 007 §3.1)
 - `MemoryStatusSchema` — `z.enum(['active', 'archived', 'deleted'])` lifecycle vocab for Memory rows
 - `MemorySchema.status` — required field of type `MemoryStatusSchema`. Domain feature surfaced by the Brain-vs-Convex audit; both KyberBot and Brain track memory lifecycle, Arcana now does too. `ingest.storeMemory` defaults `status` to `'active'`. ([ADR 007](./docs/decisions/007-shape-thesis-portable-rules-not-records.md))

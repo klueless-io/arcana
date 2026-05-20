@@ -53,11 +53,19 @@ function assertConnected(
 const FTS_FIELDS: readonly FulltextField[] = ['title', 'summary', 'content', 'tags'] as const;
 
 /**
+ * Maximum input length accepted by `buildFtsQuery`. Anything longer is
+ * rejected (returns null) to bound memory + tokenizer cost. 10 KB covers
+ * any plausible natural-language query.
+ */
+const MAX_FTS_QUERY_LENGTH = 10_000;
+
+/**
  * Build an FTS5 MATCH query from a natural-language string. Words are
  * lowercased, double-quote-escaped, and OR'd together. Returns null when
- * the input has no usable tokens.
+ * the input has no usable tokens OR exceeds MAX_FTS_QUERY_LENGTH.
  */
 function buildFtsQuery(query: string): { ftsQuery: string; tokens: string[] } | null {
+  if (query.length > MAX_FTS_QUERY_LENGTH) return null;
   const tokens = query
     .toLowerCase()
     .split(/\s+/)

@@ -83,10 +83,43 @@ export function createQuery(deps: QueryDeps): QueryApi {
       return freshEnvelope(facts);
     },
 
-    getNeighbors: async () => stub('getNeighbors'),
+    getNeighbors: async (
+      node: NodeRef,
+      hops?: number,
+    ): Promise<QueryResult<NodeRef[]>> => {
+      const neighbors = await deps.structured.getNeighbors(node, hops);
+      deps.logger.debug('arcana.query.getNeighbors', {
+        nodeType: node.type,
+        nodeId: node.id,
+        hops,
+        count: neighbors.length,
+      });
+      return freshEnvelope(neighbors);
+    },
+
+    listContradictions: async (
+      status?: Contradiction['status'],
+    ): Promise<QueryResult<Contradiction[]>> => {
+      const contradictions = await deps.structured.listContradictions(status);
+      deps.logger.debug('arcana.query.listContradictions', {
+        status,
+        count: contradictions.length,
+      });
+      return freshEnvelope(contradictions);
+    },
+
+    listInsights: async (
+      entityId?: string,
+    ): Promise<QueryResult<Insight[]>> => {
+      const insights = await deps.structured.listInsights(entityId);
+      deps.logger.debug('arcana.query.listInsights', {
+        entityId,
+        count: insights.length,
+      });
+      return freshEnvelope(insights);
+    },
+
     stats: async () => stub('stats'),
-    listContradictions: async () => stub('listContradictions'),
-    listInsights: async () => stub('listInsights'),
     readBlock: async () => stub('readBlock'),
     getBlockHistory: async () => stub('getBlockHistory'),
   };

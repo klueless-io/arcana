@@ -173,10 +173,10 @@
             "kybernesis-brain": { "mode": "needs" }
           }
         },
-        { "name": "getNeighbors", "status": "stubbed", "driven_by": null, "consumers": { "kyberbot": { "mode": "needs" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "getNeighbors", "status": "implemented", "driven_by": "v0.2.1 easy-facade sprint 2026-05-20", "commit": "TBD", "notes": "Thin facade over structured.getNeighbors; wraps in QueryResult envelope. Provider-level method was already implemented.", "consumers": { "kyberbot": { "mode": "needs" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
         { "name": "stats", "status": "stubbed", "driven_by": null, "consumers": { "kyberbot": { "mode": "unused" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "unused" } } },
-        { "name": "listContradictions", "status": "stubbed", "driven_by": null, "notes": "provider-level surface exists; kernel-level facade not yet exposed", "consumers": { "kyberbot": { "mode": "needs" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
-        { "name": "listInsights", "status": "stubbed", "driven_by": null, "consumers": { "kyberbot": { "mode": "needs" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "listContradictions", "status": "implemented", "driven_by": "v0.2.1 easy-facade sprint 2026-05-20", "commit": "TBD", "notes": "Thin facade over structured.listContradictions; respects optional status filter. Provider-level method was already implemented.", "consumers": { "kyberbot": { "mode": "needs" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
+        { "name": "listInsights", "status": "implemented", "driven_by": "v0.2.1 easy-facade sprint 2026-05-20", "commit": "TBD", "notes": "Thin facade over structured.listInsights; respects optional entityId filter. Provider-level method was already implemented.", "consumers": { "kyberbot": { "mode": "needs" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
         { "name": "readBlock", "status": "stubbed", "driven_by": null, "consumers": { "kyberbot": { "mode": "unused" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } },
         { "name": "getBlockHistory", "status": "stubbed", "driven_by": null, "consumers": { "kyberbot": { "mode": "unused" }, "kyberagent-desktop": { "mode": "unused" }, "kybernesis-brain": { "mode": "needs" } } }
       ]
@@ -201,15 +201,16 @@
     }
   ],
   "summary": {
-    "implemented_count": 17,
-    "stubbed_count": 11,
+    "implemented_count": 20,
+    "stubbed_count": 8,
     "missing_count": 0,
     "total_kernel_methods_catalogued": 28,
     "write_parity_percent": 100,
-    "read_parity_percent": 85,
-    "test_counts": { "tests": 232, "files": 24, "packages": 5, "all_passing": true },
+    "read_parity_percent": 95,
+    "test_counts": { "tests": 238, "files": 24, "packages": 5, "all_passing": true },
     "arcana_config_merge": "arcana-config package DELETED 2026-05-19; merged into arcana-core src/config/.",
     "fts_hybridsearch_sprint": "Sprint 2026-05-20 landed: searchFulltext contract + libsql FTS5 impl + kernel hybridSearch (RRF k=60) + queryFacts asOf + ADR 009 (parity gate) + ADR 010 (sleep step gap). KyberBot untouched per ADR 009 deferred-swap principle.",
+    "easy_facade_sprint": "Follow-on sprint 2026-05-20 (v0.2.1) landed: getNeighbors + listContradictions + listInsights kernel facades (thin wrappers over already-implemented provider methods). Tier 2 audits run in parallel: (a) FTS5 syntax-injection audit — clean, 10KB input cap added defensively; (b) hybridSearch vs KyberBot parity cross-check — shape parity holds, channel topology diverges (Arcana 3-channel vs KyberBot 4-channel), top-N overlap expected 60–75% on parity test, documented in docs/plans/2026-05-20-tier1-tier2-facades-and-audits.md.",
     "delivery_review_status": "CONDITIONAL PASS r2 (2026-05-20). EC-015 in-flight guard needed before merge. 4 KyberBot-side patches still remaining.",
     "consumers_actively_adopting": ["kyberbot (arcana-adoption branch)"],
     "kyberbot_modules_closed": 10,

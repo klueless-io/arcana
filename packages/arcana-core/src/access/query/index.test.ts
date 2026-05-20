@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createNoopLogger, type Fact } from '@kybernesis/arcana-contracts';
+import {
+  createNoopLogger,
+  type Fact,
+  type Contradiction,
+  type Insight,
+  type Edge,
+} from '@kybernesis/arcana-contracts';
 import { createFakeStructuredStore } from '@kybernesis/arcana-testkit/fakes';
 import { createQuery, type QueryApi, type QueryDeps } from './index.js';
 import { NotImplementedError } from '../../errors.js';
@@ -137,23 +143,128 @@ describe('query.queryFacts', () => {
   });
 });
 
-describe('still-stubbed query methods', () => {
-  it('getNeighbors throws NotImplementedError', async () => {
-    await expect(
-      api.getNeighbors({ type: 'memory', id: 'mem_1' }),
-    ).rejects.toThrow(NotImplementedError);
+describe('query.getNeighbors', () => {
+  it('returns neighbors of a memory node, wrapped in QueryResult', async () => {
+    const edge: Edge = {
+      id: 'edge_1',
+      from: { type: 'memory', id: 'mem_a' },
+      to: { type: 'memory', id: 'mem_b' },
+      relation: 'related',
+      confidence: 0.9,
+      sharedTags: [],
+      method: 'manual',
+      createdAt: '2026-05-20T00:00:00.000Z',
+    };
+    await structured.storeEdge(edge);
+
+    const result = await api.getNeighbors({ type: 'memory', id: 'mem_a' });
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]).toEqual({ type: 'memory', id: 'mem_b' });
+    expect(result.stale).toBe(false);
+    expect(result.data_age_ms).toBe(0);
   });
 
+  it('returns empty array for an isolated node', async () => {
+    const result = await api.getNeighbors({ type: 'memory', id: 'mem_alone' });
+    expect(result.data).toEqual([]);
+  });
+
+  it('wraps in QueryResult envelope', async () => {
+    const result = await api.getNeighbors({ type: 'memory', id: 'whatever' });
+    expect(result.generated_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(result.data_age_ms).toBe(0);
+    expect(result.stale).toBe(false);
+  });
+});
+
+describe('query.listContradictions', () => {
+  const pending: Contradiction = {
+    id: 'c_1',
+    factAId: 'f_a',
+    factBId: 'f_b',
+    status: 'pending',
+    createdAt: '2026-05-20T00:00:00.000Z',
+  };
+  const resolved: Contradiction = {
+    id: 'c_2',
+    factAId: 'f_c',
+    factBId: 'f_d',
+    status: 'resolved',
+    resolution: 'merged into single fact',
+    createdAt: '2026-05-20T00:00:00.000Z',
+  };
+
+  beforeEach(async () => {
+    await structured.storeContradiction(pending);
+    await structured.storeContradiction(resolved);
+  });
+
+  it('returns all contradictions when status omitted', async () => {
+    const result = await api.listContradictions();
+    expect(result.data.map((c) => c.id).sort()).toEqual(['c_1', 'c_2']);
+  });
+
+  it('filters by status when supplied', async () => {
+    const result = await api.listContradictions('pending');
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe('c_1');
+  });
+
+  it('wraps in QueryResult envelope', async () => {
+    const result = await api.listContradictions();
+    expect(result.generated_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(result.data_age_ms).toBe(0);
+    expect(result.stale).toBe(false);
+  });
+});
+
+describe('query.listInsights', () => {
+  const insightForEnt1: Insight = {
+    id: 'i_1',
+    entityId: 'ent_1',
+    type: 'deduction',
+    statement: 'Inferred trait',
+    supportingFactIds: ['f_a'],
+    confidence: 0.8,
+    createdAt: '2026-05-20T00:00:00.000Z',
+  };
+  const insightForEnt2: Insight = {
+    id: 'i_2',
+    entityId: 'ent_2',
+    type: 'induction',
+    statement: 'Pattern noticed',
+    supportingFactIds: ['f_b'],
+    confidence: 0.7,
+    createdAt: '2026-05-20T00:00:00.000Z',
+  };
+
+  beforeEach(async () => {
+    await structured.storeInsight(insightForEnt1);
+    await structured.storeInsight(insightForEnt2);
+  });
+
+  it('returns all insights when entityId omitted', async () => {
+    const result = await api.listInsights();
+    expect(result.data.map((i) => i.id).sort()).toEqual(['i_1', 'i_2']);
+  });
+
+  it('filters by entityId when supplied', async () => {
+    const result = await api.listInsights('ent_1');
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe('i_1');
+  });
+
+  it('wraps in QueryResult envelope', async () => {
+    const result = await api.listInsights();
+    expect(result.generated_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(result.data_age_ms).toBe(0);
+    expect(result.stale).toBe(false);
+  });
+});
+
+describe('still-stubbed query methods', () => {
   it('stats throws NotImplementedError', async () => {
     await expect(api.stats()).rejects.toThrow(NotImplementedError);
-  });
-
-  it('listContradictions throws NotImplementedError', async () => {
-    await expect(api.listContradictions()).rejects.toThrow(NotImplementedError);
-  });
-
-  it('listInsights throws NotImplementedError', async () => {
-    await expect(api.listInsights()).rejects.toThrow(NotImplementedError);
   });
 
   it('readBlock throws NotImplementedError', async () => {
