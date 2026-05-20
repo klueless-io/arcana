@@ -3,190 +3,328 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Arcana — Package Graph</title>
+<title>Arcana // Package Graph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0d1117; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; line-height: 1.5; padding: 24px; min-height: 100vh; }
-  h1 { font-size: 20px; font-weight: 600; color: #f1f5f9; letter-spacing: -0.02em; }
-  .subtitle { color: #64748b; font-size: 13px; margin-top: 4px; }
-  .meta { color: #475569; font-size: 11px; margin-top: 6px; }
-  .header { margin-bottom: 36px; }
-
-  /* graph canvas */
-  .graph { position: relative; width: 100%; max-width: 900px; height: 520px; margin: 0 auto 32px; }
-
-  /* SVG arrows */
-  svg.arrows { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-
-  /* package cards */
-  .pkg {
-    position: absolute;
-    width: 160px;
-    background: #111827;
-    border: 1px solid #1e2a3a;
-    border-radius: 10px;
-    padding: 14px 16px;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    cursor: default;
+  :root {
+    --bg-primary:   #0d1117;
+    --bg-secondary: #111827;
+    --bg-tertiary:  #161d2d;
+    --fg-primary:   #f1f5f9;
+    --fg-secondary: #94a3b8;
+    --fg-tertiary:  #64748b;
+    --fg-muted:     #475569;
+    --border-color: #1e2a3a;
+    --border-hover: #2d3f5a;
+    --accent-emerald: #10b981;
+    --accent-cyan:  #22d3ee;
+    --accent-teal:  #14b8a6;
+    --status-success: #10b981;
+    --status-warning: #f59e0b;
+    --font-mono: 'Space Mono', 'SF Mono', monospace;
+    --font-sans: 'Inter', -apple-system, sans-serif;
   }
-  .pkg:hover { border-color: #4b5563; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
-  .pkg-name { font-size: 12px; font-weight: 600; color: #c8d6e5; font-family: 'SF Mono','Fira Code',monospace; margin-bottom: 6px; word-break: break-all; }
-  .pkg-version { font-size: 10px; color: #4ade80; background: rgba(34,197,94,0.1); padding: 1px 6px; border-radius: 10px; display: inline-block; margin-bottom: 8px; }
-  .pkg-role { font-size: 10.5px; color: #64748b; line-height: 1.4; }
-  .pkg-tests { font-size: 10px; color: #475569; margin-top: 6px; }
-  .badge { display: inline-block; font-size: 9.5px; padding: 1px 6px; border-radius: 10px; margin-top: 4px; }
-  .badge-foundation { background: rgba(99,102,241,0.15); color: #818cf8; }
-  .badge-kernel    { background: rgba(6,182,212,0.12); color: #22d3ee; }
-  .badge-testkit   { background: rgba(168,85,247,0.12); color: #c084fc; }
-  .badge-provider  { background: rgba(245,158,11,0.12); color: #fbbf24; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg-primary); color: var(--fg-secondary); font-family: var(--font-mono); font-size: 13px; line-height: 1.6; padding: 32px; }
+  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: var(--fg-muted); }
 
-  /* story card */
-  .story { display: flex; gap: 16px; flex-wrap: wrap; max-width: 900px; margin: 0 auto; }
-  .story-card { flex: 1; min-width: 200px; background: #0f1623; border: 1px solid #1e2a3a; border-radius: 8px; padding: 14px 16px; }
-  .story-title { font-size: 11px; font-weight: 600; color: #6366f1; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
-  .story-body { font-size: 12px; color: #64748b; line-height: 1.6; }
-  .story-body strong { color: #94a3b8; }
+  .header { margin-bottom: 32px; }
+  .wordmark { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 16px; }
+  .wordmark em { color: var(--accent-emerald); font-style: normal; }
+  h1 { font-size: 22px; font-weight: 700; color: var(--fg-primary); letter-spacing: -0.02em; }
+  .tagline { font-family: var(--font-sans); font-weight: 300; font-size: 12px; color: var(--fg-tertiary); margin-top: 6px; }
+  .hint { font-size: 10px; letter-spacing: 0.5px; color: var(--fg-muted); margin-top: 8px; }
+  .hint em { color: var(--accent-cyan); font-style: normal; }
 
-  /* npm badge */
-  .npm { font-size: 10px; color: #475569; margin-top: 6px; }
-  .npm a { color: #6366f1; text-decoration: none; }
+  /* graph container */
+  #graph-wrap { position: relative; width: 100%; height: 480px; border: 1px solid var(--border-color); background: var(--bg-secondary); overflow: hidden; margin-bottom: 1px; }
+  #graph-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  /* nodes */
+  .node {
+    position: absolute;
+    width: 172px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    padding: 14px 16px;
+    cursor: grab;
+    user-select: none;
+    transition: border-color 80ms ease-out;
+  }
+  .node:hover  { border-color: var(--border-hover); }
+  .node.active { border-color: var(--accent-emerald); cursor: grabbing; }
+  .node-accent { height: 2px; width: 20px; margin-bottom: 12px; }
+  .node-name { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--fg-primary); margin-bottom: 4px; word-break: break-word; }
+  .node-version { display: inline-block; font-size: 10px; letter-spacing: 0.5px; color: var(--accent-emerald); border: 1px solid rgba(16,185,129,0.3); padding: 1px 6px; margin-bottom: 8px; }
+  .node-role { font-family: var(--font-sans); font-weight: 300; font-size: 11px; color: var(--fg-tertiary); line-height: 1.5; }
+  .node-badge { display: inline-block; font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 8px; padding: 1px 6px; border: 1px solid; }
+  .badge-foundation { color: var(--accent-emerald); border-color: rgba(16,185,129,0.3); }
+  .badge-kernel     { color: var(--accent-cyan);    border-color: rgba(34,211,238,0.3); }
+  .badge-testkit    { color: #c084fc;               border-color: rgba(192,132,252,0.3); }
+  .badge-provider   { color: var(--status-warning); border-color: rgba(245,158,11,0.3); }
+  .node-tests { font-size: 10px; color: var(--fg-muted); margin-top: 6px; }
+
+  /* section title */
+  .section-title { font-size: 11px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent-emerald); padding: 12px 0 10px; }
+
+  /* story cards */
+  .stories { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border-color); }
+  .story { background: var(--bg-secondary); padding: 18px 20px; }
+  .story-title { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 10px; }
+  .story-body { font-family: var(--font-sans); font-weight: 300; font-size: 12px; color: var(--fg-tertiary); line-height: 1.7; }
+  .story-body strong { color: var(--fg-secondary); font-weight: 500; }
+  code { font-family: var(--font-mono); font-size: 11px; color: var(--accent-cyan); }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>Arcana — Package Graph</h1>
-  <div class="subtitle">5 packages · v0.1.1 · all on npm · dependency direction shows publish order</div>
-  <div class="meta">2026-05-20 · arcana-config absorbed into arcana-core on 2026-05-19 · arcana-provider-sqlite-vec added 2026-05-20</div>
+  <div class="wordmark">// <em>ARCANA</em> · PACKAGE GRAPH</div>
+  <h1>Package Graph</h1>
+  <div class="tagline">5 packages · v0.1.1 · all on npm · dependency direction shows publish order</div>
+  <div class="hint"><em>Drag</em> nodes to rearrange · arrows update live</div>
 </div>
 
-<div class="graph" id="graph">
-
-  <!-- SVG arrow layer -->
-  <svg class="arrows" id="arrows">
+<div id="graph-wrap">
+  <svg id="graph-svg">
     <defs>
-      <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-        <polygon points="0 0, 8 3, 0 6" fill="#2d3f5a" />
+      <marker id="arrow" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+        <polygon points="0 0, 7 2.5, 0 5" fill="#2d3f5a"/>
       </marker>
     </defs>
-    <!-- arrows drawn by JS below -->
+    <!-- lines injected by JS -->
   </svg>
 
-  <!-- arcana-contracts (top centre — foundation, no internal deps) -->
-  <div class="pkg" id="contracts" style="left:calc(50% - 80px); top: 20px;">
-    <div class="pkg-name">arcana-contracts</div>
-    <div class="pkg-version">v0.1.1</div>
-    <div class="pkg-role">Zod schemas · provider interfaces · QueryResult · ARP scopes</div>
-    <div class="badge badge-foundation">foundation</div>
-    <div class="pkg-tests">37 tests · depends only on zod</div>
+  <div class="node" id="n-contracts" data-id="contracts">
+    <div class="node-accent" style="background:var(--accent-emerald)"></div>
+    <div class="node-name">arcana-contracts</div>
+    <div class="node-version">v0.1.1</div>
+    <div class="node-role">Zod schemas · provider interfaces · QueryResult · ARP scopes</div>
+    <div class="node-badge badge-foundation">foundation</div>
+    <div class="node-tests">37 tests · depends only on zod</div>
   </div>
 
-  <!-- arcana-core (left of centre, row 2) -->
-  <div class="pkg" id="core" style="left: 80px; top: 230px;">
-    <div class="pkg-name">arcana-core</div>
-    <div class="pkg-version">v0.1.1</div>
-    <div class="pkg-role">Kernel · zones · createArcana() · config loader (merged from arcana-config)</div>
-    <div class="badge badge-kernel">kernel</div>
-    <div class="pkg-tests">~120 tests</div>
+  <div class="node" id="n-core" data-id="core">
+    <div class="node-accent" style="background:var(--accent-cyan)"></div>
+    <div class="node-name">arcana-core</div>
+    <div class="node-version">v0.1.1</div>
+    <div class="node-role">Kernel · zones · createArcana() · config loader (merged from arcana-config)</div>
+    <div class="node-badge badge-kernel">kernel</div>
+    <div class="node-tests">~120 tests</div>
   </div>
 
-  <!-- arcana-testkit (centre, row 2) -->
-  <div class="pkg" id="testkit" style="left:calc(50% - 80px); top: 230px;">
-    <div class="pkg-name">arcana-testkit</div>
-    <div class="pkg-version">v0.1.1</div>
-    <div class="pkg-role">In-memory fakes for all 4 provider interfaces</div>
-    <div class="badge badge-testkit">testkit</div>
-    <div class="pkg-tests">4 fakes · compliance suite deferred</div>
+  <div class="node" id="n-testkit" data-id="testkit">
+    <div class="node-accent" style="background:#a855f7"></div>
+    <div class="node-name">arcana-testkit</div>
+    <div class="node-version">v0.1.1</div>
+    <div class="node-role">In-memory fakes for all 4 provider interfaces</div>
+    <div class="node-badge badge-testkit">testkit</div>
+    <div class="node-tests">4 fakes · compliance deferred</div>
   </div>
 
-  <!-- arcana-provider-libsql (far left, row 3) -->
-  <div class="pkg" id="libsql" style="left: 20px; top: 390px;">
-    <div class="pkg-name">arcana-provider-libsql</div>
-    <div class="pkg-version">v0.1.1</div>
-    <div class="pkg-role">StructuredStore over libsql · all 9 entity types · mkdirSync fix</div>
-    <div class="badge badge-provider">provider</div>
-    <div class="pkg-tests">~55 tests</div>
+  <div class="node" id="n-libsql" data-id="libsql">
+    <div class="node-accent" style="background:var(--status-warning)"></div>
+    <div class="node-name">arcana-provider-libsql</div>
+    <div class="node-version">v0.1.1</div>
+    <div class="node-role">StructuredStore over libsql · 9 entity types · mkdirSync fix</div>
+    <div class="node-badge badge-provider">provider</div>
+    <div class="node-tests">~55 tests</div>
   </div>
 
-  <!-- arcana-provider-sqlite-vec (right, row 3) -->
-  <div class="pkg" id="sqlitevec" style="right: 20px; top: 390px;">
-    <div class="pkg-name">arcana-provider-sqlite-vec</div>
-    <div class="pkg-version">v0.1.1</div>
-    <div class="pkg-role">VectorStore over sqlite-vec · no Docker · :memory: support</div>
-    <div class="badge badge-provider">provider</div>
-    <div class="pkg-tests">11 tests · new in v0.1.1</div>
+  <div class="node" id="n-sqlitevec" data-id="sqlitevec">
+    <div class="node-accent" style="background:var(--status-warning)"></div>
+    <div class="node-name">arcana-provider-sqlite-vec</div>
+    <div class="node-version">v0.1.1</div>
+    <div class="node-role">VectorStore over sqlite-vec · no Docker · :memory: support</div>
+    <div class="node-badge badge-provider">provider · new v0.1.1</div>
+    <div class="node-tests">11 tests</div>
   </div>
+</div>
 
+<div class="section-title">// NOTES</div>
+<div class="stories">
+  <div class="story">
+    <div class="story-title">Publish order</div>
+    <div class="story-body">
+      <strong>arcana-contracts</strong> must publish first — all other packages reference it.
+      The other 4 publish in any order. Previous v0.1.0 used <code>npm publish</code>
+      leaving <code>workspace:*</code> in manifests. v0.1.1 fixed with <code>pnpm publish -r</code>.
+    </div>
+  </div>
+  <div class="story">
+    <div class="story-title">arcana-config absorbed</div>
+    <div class="story-body">
+      A 5th package <strong>arcana-config</strong> existed briefly. Merged into arcana-core
+      (src/config/) on 2026-05-19 — it had no external consumers and only added zod transitively.
+      Simplification with no API change.
+    </div>
+  </div>
+  <div class="story">
+    <div class="story-title">Provider gaps</div>
+    <div class="story-body">
+      <strong>StructuredStore</strong>: libsql (real) + testkit (fake).
+      <strong>VectorStore</strong>: sqlite-vec (real) + testkit (fake).
+      KyberBot's ChromaDB is a consumer adapter, not an Arcana package.
+      <strong>arcana-provider-postgres</strong> is next — Brain migration gate.
+    </div>
+  </div>
 </div>
 
 <script>
-// Draw arrows after layout is computed
-window.addEventListener('load', () => {
-  const graph = document.getElementById('graph');
-  const svg   = document.getElementById('arrows');
-  const gr    = graph.getBoundingClientRect();
+// ── node positions ──────────────────────────────────────────────────────────
+const CARD_W = 172;
+const positions = {
+  contracts: { x: null, y: 24 },   // centred dynamically
+  core:      { x: 20,   y: 230 },
+  testkit:   { x: 210,  y: 230 },
+  libsql:    { x: 20,   y: 360 },  // below core
+  sqlitevec: { x: 210,  y: 360 },  // below testkit … right side filled by layout
+};
 
-  function centre(el) {
-    const r = el.getBoundingClientRect();
-    return { x: r.left - gr.left + r.width/2, y: r.top - gr.top + r.height/2, t: r.top - gr.top, b: r.top - gr.top + r.height, l: r.left - gr.left, r: r.left - gr.left + r.width };
+const edges = [
+  ['contracts','core'],
+  ['contracts','testkit'],
+  ['contracts','libsql'],
+  ['contracts','sqlitevec'],
+];
+
+// ── DOM refs ─────────────────────────────────────────────────────────────────
+const wrap = document.getElementById('graph-wrap');
+const svg  = document.getElementById('graph-svg');
+
+const nodeEls = {
+  contracts: document.getElementById('n-contracts'),
+  core:      document.getElementById('n-core'),
+  testkit:   document.getElementById('n-testkit'),
+  libsql:    document.getElementById('n-libsql'),
+  sqlitevec: document.getElementById('n-sqlitevec'),
+};
+
+// ── initial layout ───────────────────────────────────────────────────────────
+function initPositions() {
+  const W = wrap.clientWidth;
+
+  // spread the 4 dependents evenly
+  const dep4 = ['core','testkit','libsql','sqlitevec'];
+  const cols = 4;
+  const colW = Math.floor((W - 40) / cols);
+  dep4.forEach((id, i) => {
+    positions[id].x = 20 + i * colW;
+  });
+  // contracts centred
+  positions.contracts.x = Math.floor((W - CARD_W) / 2);
+
+  // pin row y based on actual measured heights after first render
+  // libsql/sqlitevec go one row below core/testkit
+  const rowMid = Math.max(
+    nodeEls.core.offsetHeight,
+    nodeEls.testkit.offsetHeight
+  );
+  positions.libsql.y    = 28 + nodeEls.contracts.offsetHeight + 24 + rowMid + 24;
+  positions.sqlitevec.y = positions.libsql.y;
+
+  positions.core.y = 28 + nodeEls.contracts.offsetHeight + 24;
+  positions.testkit.y = positions.core.y;
+}
+
+function applyPositions() {
+  for (const [id, pos] of Object.entries(positions)) {
+    const el = nodeEls[id];
+    el.style.left = pos.x + 'px';
+    el.style.top  = pos.y + 'px';
   }
+}
 
-  function arrow(fromId, toId, color='#2d3f5a') {
-    const f = centre(document.getElementById(fromId));
-    const t = centre(document.getElementById(toId));
+// ── SVG arrows ───────────────────────────────────────────────────────────────
+const lineEls = {};
+function buildLines() {
+  svg.querySelectorAll('line').forEach(l => l.remove());
+  for (const [from, to] of edges) {
     const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1', f.x); line.setAttribute('y1', f.b);
-    line.setAttribute('x2', t.x); line.setAttribute('y2', t.t - 4);
-    line.setAttribute('stroke', color);
-    line.setAttribute('stroke-width', '1.5');
-    line.setAttribute('marker-end', 'url(#arrowhead)');
-    line.setAttribute('stroke-dasharray', '');
+    line.setAttribute('stroke','#2d3f5a');
+    line.setAttribute('stroke-width','1.5');
+    line.setAttribute('marker-end','url(#arrow)');
     svg.appendChild(line);
+    lineEls[from+'>'+to] = line;
   }
+}
 
-  // contracts → core
-  arrow('contracts', 'core', '#3d4f6a');
-  // contracts → testkit
-  arrow('contracts', 'testkit', '#3d4f6a');
-  // contracts → libsql
-  arrow('contracts', 'libsql', '#3d4f6a');
-  // contracts → sqlite-vec
-  arrow('contracts', 'sqlitevec', '#3d4f6a');
-  // core → libsql (core is used by providers for types)
-  // Actually libsql depends on contracts only; core depends on contracts
-  // No core→provider dep; skip that arrow
+function midBottom(id) {
+  const p = positions[id], el = nodeEls[id];
+  return { x: p.x + el.offsetWidth/2, y: p.y + el.offsetHeight };
+}
+function midTop(id) {
+  const p = positions[id], el = nodeEls[id];
+  return { x: p.x + el.offsetWidth/2, y: p.y };
+}
+
+function updateLines() {
+  for (const [from, to] of edges) {
+    const line = lineEls[from+'>'+to];
+    const f = midBottom(from);
+    const t = midTop(to);
+    line.setAttribute('x1', f.x); line.setAttribute('y1', f.y + 2);
+    line.setAttribute('x2', t.x); line.setAttribute('y2', t.y - 6);
+  }
+}
+
+// ── drag ─────────────────────────────────────────────────────────────────────
+let dragging = null, dragOffX = 0, dragOffY = 0;
+
+for (const [id, el] of Object.entries(nodeEls)) {
+  el.addEventListener('mousedown', e => {
+    e.preventDefault();
+    dragging = id;
+    el.classList.add('active');
+    const rect = wrap.getBoundingClientRect();
+    dragOffX = e.clientX - rect.left - positions[id].x;
+    dragOffY = e.clientY - rect.top  - positions[id].y;
+  });
+}
+
+document.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  const rect = wrap.getBoundingClientRect();
+  const el   = nodeEls[dragging];
+  let nx = e.clientX - rect.left - dragOffX;
+  let ny = e.clientY - rect.top  - dragOffY;
+  // clamp inside wrap
+  nx = Math.max(0, Math.min(wrap.clientWidth  - el.offsetWidth,  nx));
+  ny = Math.max(0, Math.min(wrap.clientHeight - el.offsetHeight, ny));
+  positions[dragging].x = nx;
+  positions[dragging].y = ny;
+  el.style.left = nx + 'px';
+  el.style.top  = ny + 'px';
+  updateLines();
+});
+
+document.addEventListener('mouseup', () => {
+  if (dragging) {
+    nodeEls[dragging].classList.remove('active');
+    dragging = null;
+  }
+});
+
+// ── boot ─────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  // place nodes off-screen first to get heights
+  for (const el of Object.values(nodeEls)) { el.style.visibility = 'hidden'; el.style.left = '0px'; el.style.top = '0px'; }
+  requestAnimationFrame(() => {
+    initPositions();
+    applyPositions();
+    buildLines();
+    updateLines();
+    for (const el of Object.values(nodeEls)) el.style.visibility = '';
+  });
+});
+
+window.addEventListener('resize', () => {
+  initPositions();
+  applyPositions();
+  updateLines();
 });
 </script>
-
-<!-- Story cards below -->
-<div class="story">
-  <div class="story-card">
-    <div class="story-title">Why publish order matters</div>
-    <div class="story-body">
-      <strong>arcana-contracts</strong> must publish first — all other packages reference it.
-      The other 4 can publish in any order. Previous v0.1.0 publish used <code>npm publish</code>
-      which left <code>workspace:*</code> in manifests instead of real semver.
-      v0.1.1 published with <code>pnpm publish -r</code> — confirmed clean.
-    </div>
-  </div>
-  <div class="story-card">
-    <div class="story-title">arcana-config disappearance</div>
-    <div class="story-body">
-      There was a 5th package: <strong>arcana-config</strong>. It was merged into arcana-core
-      on 2026-05-19 (src/config/). It had no external consumers and only added zod as a
-      transitive dep. Removing it simplified the graph without changing any public API.
-    </div>
-  </div>
-  <div class="story-card">
-    <div class="story-title">Provider landscape gaps</div>
-    <div class="story-body">
-      <strong>StructuredStore</strong>: one real provider (libsql), one fake (testkit).
-      <strong>VectorStore</strong>: one real provider (sqlite-vec), one fake (testkit). KyberBot's
-      ChromaDB wrapper is a consumer adapter, not an Arcana package.
-      <strong>arcana-provider-postgres</strong> is the next planned provider — needed for Brain migration.
-    </div>
-  </div>
-</div>
-
 </body>
 </html>

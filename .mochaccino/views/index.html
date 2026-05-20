@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arcana // Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg-primary:    #0d1117;
+    --bg-secondary:  #111827;
+    --bg-tertiary:   #161d2d;
+    --bg-elevated:   #1a2235;
+    --fg-primary:    #f1f5f9;
+    --fg-secondary:  #94a3b8;
+    --fg-tertiary:   #64748b;
+    --fg-muted:      #475569;
+    --border-color:  #1e2a3a;
+    --border-hover:  #2d3f5a;
+    --accent-emerald: #10b981;
+    --accent-emerald-muted: rgba(16,185,129,0.12);
+    --accent-cyan:   #22d3ee;
+    --accent-cyan-muted: rgba(34,211,238,0.12);
+    --accent-teal:   #14b8a6;
+    --status-success: #10b981;
+    --status-warning: #f59e0b;
+    --status-error:   #ef4444;
+    --font-mono: 'Space Mono', 'SF Mono', 'Monaco', monospace;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --radius: 0px;
+    --transition-fast: 100ms ease-out;
+    --transition-normal: 150ms ease;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg-primary); color: var(--fg-secondary); font-family: var(--font-mono); font-size: 13px; line-height: 1.6; padding: 40px 32px; min-height: 100vh; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--fg-muted); }
+
+  /* section title */
+  .section-title { font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent-emerald); margin-bottom: 24px; }
+
+  .header { max-width: 900px; margin: 0 auto 48px; }
+  .wordmark { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 20px; }
+  .wordmark em { color: var(--accent-emerald); font-style: normal; }
+  h1 { font-family: var(--font-mono); font-size: 28px; font-weight: 700; color: var(--fg-primary); letter-spacing: -0.02em; line-height: 1.2; }
+  .tagline { font-family: var(--font-sans); font-weight: 300; font-size: 13px; color: var(--fg-tertiary); margin-top: 8px; }
+
+  /* stat strip */
+  .stats { display: flex; gap: 0; margin-top: 28px; border: 1px solid var(--border-color); }
+  .stat { flex: 1; padding: 16px 20px; border-right: 1px solid var(--border-color); }
+  .stat:last-child { border-right: none; }
+  .stat-val { font-family: var(--font-mono); font-size: 24px; font-weight: 700; color: var(--fg-primary); letter-spacing: -0.02em; }
+  .stat-val.emerald { color: var(--accent-emerald); }
+  .stat-val.warning { color: var(--status-warning); }
+  .stat-val.error   { color: var(--status-error); }
+  .stat-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--fg-muted); margin-top: 4px; }
+
+  /* cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1px; max-width: 900px; margin: 0 auto 48px; background: var(--border-color); }
+  .card { background: var(--bg-secondary); padding: 24px; text-decoration: none; color: inherit; display: block; transition: background var(--transition-fast); position: relative; }
+  .card:hover { background: var(--bg-tertiary); }
+  .card-accent { width: 24px; height: 2px; margin-bottom: 20px; }
+  .ca-emerald { background: var(--accent-emerald); }
+  .ca-cyan    { background: var(--accent-cyan); }
+  .ca-teal    { background: var(--accent-teal); }
+  .card-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 8px; }
+  .card-title { font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: var(--fg-primary); margin-bottom: 10px; }
+  .card-desc  { font-family: var(--font-sans); font-weight: 300; font-size: 12px; color: var(--fg-tertiary); line-height: 1.7; }
+  .card-meta  { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .badge { font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--accent-cyan); border: 1px solid rgba(34,211,238,0.3); padding: 1px 6px; line-height: 16px; }
+  .badge-start { color: var(--accent-emerald); border-color: rgba(16,185,129,0.3); }
+  .datasource { font-size: 10px; color: var(--fg-muted); font-family: var(--font-mono); }
+
+  /* blockers */
+  .state-section { max-width: 900px; margin: 0 auto; }
+  .blocker-list { display: flex; flex-direction: column; gap: 1px; background: var(--border-color); margin-bottom: 24px; }
+  .blocker { display: flex; gap: 16px; align-items: flex-start; background: var(--bg-secondary); padding: 14px 20px; }
+  .blocker-status { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--status-warning); flex-shrink: 0; padding-top: 2px; min-width: 60px; }
+  .blocker-status.done { color: var(--status-success); }
+  .blocker-body { }
+  .blocker-name { font-family: var(--font-mono); font-size: 13px; color: var(--fg-primary); }
+  .blocker-detail { font-family: var(--font-sans); font-weight: 300; font-size: 11px; color: var(--fg-muted); margin-top: 3px; line-height: 1.6; }
+
+  /* done strip */
+  .done-strip { display: flex; gap: 1px; flex-wrap: wrap; background: var(--border-color); }
+  .done-item { font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; padding: 6px 12px; background: var(--bg-secondary); color: var(--accent-emerald); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="wordmark">// <em>KYBERNESIS</em> · ARCANA · BUILD DOCUMENTATION</div>
+  <h1>Mochaccino Gallery</h1>
+  <div class="tagline">Portable brain kernel for AI agents — v0.1.1 — 2026-05-20</div>
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-val">212</div>
+      <div class="stat-label">Tests passing</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">5</div>
+      <div class="stat-label">npm packages</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val emerald">100%</div>
+      <div class="stat-label">Write parity</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val warning">50%</div>
+      <div class="stat-label">Read parity</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val error">0%</div>
+      <div class="stat-label">Sleep pipeline</div>
+    </div>
+  </div>
+</div>
+
+<div style="max-width:900px;margin:0 auto 24px">
+  <div class="section-title">// VIEWS</div>
+</div>
+
+<div class="grid">
+  <a class="card" href="kernel-methods.html">
+    <div class="card-accent ca-emerald"></div>
+    <div class="card-label">Matrix</div>
+    <div class="card-title">Kernel Method Status</div>
+    <div class="card-desc">Zone × method grid. What's implemented vs stubbed. Which consumer demanded each method. Write, read, and sleep parity at a glance.</div>
+    <div class="card-meta">
+      <span class="badge badge-start">Start here</span>
+      <span class="datasource">06-kernel-methods.json</span>
+    </div>
+  </a>
+
+  <a class="card" href="package-graph.html">
+    <div class="card-accent ca-cyan"></div>
+    <div class="card-label">Graph</div>
+    <div class="card-title">Package Graph</div>
+    <div class="card-desc">5 packages and their dependency direction. Why arcana-contracts publishes first. The arcana-config absorption and sqlite-vec addition stories.</div>
+    <div class="card-meta">
+      <span class="datasource">02-package-graph.json</span>
+    </div>
+  </a>
+
+  <a class="card" href="parity-gap.html">
+    <div class="card-accent ca-teal"></div>
+    <div class="card-label">Heatmap</div>
+    <div class="card-title">Parity Gap</div>
+    <div class="card-desc">Arcana vs KyberBot vs Brain. What each consumer has, uses, and needs. The 5 Convex artifacts blocking Brain adoption.</div>
+    <div class="card-meta">
+      <span class="datasource">06-kernel-methods.json · 01-task-progress.json</span>
+    </div>
+  </a>
+</div>
+
+<div class="state-section">
+  <div class="section-title">// CURRENT STATE</div>
+  <div class="blocker-list">
+    <div class="blocker">
+      <div class="blocker-status">PENDING</div>
+      <div class="blocker-body">
+        <div class="blocker-name">KyberBot version swap + merge</div>
+        <div class="blocker-detail">EC-015 applied · v0.1.1 confirmed live · awaiting final commit (file: → ^0.1.1) then arcana-adoption → main merge</div>
+      </div>
+    </div>
+    <div class="blocker">
+      <div class="blocker-status">NEXT</div>
+      <div class="blocker-body">
+        <div class="blocker-name">hybridSearch implementation</div>
+        <div class="blocker-detail">Needs FTS5 tables in StructuredStore DDL + sqlite-vec wired into createArcana(). After KyberBot merge.</div>
+      </div>
+    </div>
+    <div class="blocker">
+      <div class="blocker-status">DEFERRED</div>
+      <div class="blocker-body">
+        <div class="blocker-name">Sleep pipeline (13 steps)</div>
+        <div class="blocker-detail">All stubbed. KyberBot's 9-step pipeline is the reference. Demanded when KyberBot wires sleep modules to Arcana.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">// SHIPPED</div>
+  <div class="done-strip">
+    <div class="done-item">arcana-contracts v0.1.1</div>
+    <div class="done-item">arcana-core v0.1.1</div>
+    <div class="done-item">arcana-testkit v0.1.1</div>
+    <div class="done-item">arcana-provider-libsql v0.1.1</div>
+    <div class="done-item">arcana-provider-sqlite-vec v0.1.1</div>
+    <div class="done-item">getEntityProfile</div>
+    <div class="done-item">factRetrieval</div>
+    <div class="done-item">KyberBot EC-015</div>
+    <div class="done-item">npm publish clean</div>
+  </div>
+</div>
+
+</body>
+</html>
