@@ -1,8 +1,8 @@
 {
   "angle": "data-flow",
   "title": "Arcana Publish Pipeline",
-  "subtitle": "From commit to npm \u2014 v0.1.0 partial; v0.1.1 fixed; v0.2.0 ships FTS+hybrid",
-  "purpose": "Shows the publish path for v0.x. v0.1.0 was partial (workspace:* not rewritten). v0.1.1 corrected via pnpm publish -r. v0.2.0 ships the FTS+hybrid sprint \u2014 minor bump per semver due to additive contract methods (searchFulltext, asOf).",
+  "subtitle": "From commit to npm \u2014 v0.1.0 partial; v0.1.1 fixed; v0.2.0 FTS+hybrid; v0.2.1 query facades",
+  "purpose": "Shows the publish path for v0.x. v0.1.0 was partial (workspace:* not rewritten). v0.1.1 corrected via pnpm publish -r. v0.2.0 shipped the FTS+hybrid sprint (minor bump \u2014 additive contract methods). v0.2.1 shipped three query-zone kernel facades + defensive FTS5 input cap (patch bump \u2014 code-additive only).",
   "npm_org": "kybernesis",
   "npm_scope": "@kybernesis/*",
   "package_count": 5,
@@ -14,11 +14,11 @@
     "@kybernesis/arcana-provider-sqlite-vec"
   ],
   "publish_order": "contracts first (no workspace deps), then core, testkit, provider-libsql, provider-sqlite-vec in any order",
-  "publish_status": "v0.2.0 live since 2026-05-20 (FTS+hybrid sprint); v0.1.1 superseded",
+  "publish_status": "v0.2.1 live since 2026-05-20 (query-zone facades + FTS5 cap); v0.2.0 superseded by patch",
   "publish_command": "pnpm publish -r --filter='./packages/*' --access public",
   "generated": "2026-05-20",
   "system": "arcana",
-  "milestone": "v0.2.0",
+  "milestone": "v0.2.1",
   "status_legend": [
     {
       "id": "not_started",
@@ -129,7 +129,25 @@
         { "id": "verify_libsql", "label": "npm view @kybernesis/arcana-provider-libsql@0.2.0", "status": "green" },
         { "id": "verify_sqlite_vec", "label": "npm view @kybernesis/arcana-provider-sqlite-vec@0.2.0", "status": "green" },
         { "id": "verify_testkit", "label": "npm view @kybernesis/arcana-testkit@0.2.0", "status": "green" },
-        { "id": "tag", "label": "git tag v0.2.0 && git push --tags", "status": "not_started", "note": "pending \u2014 runs after this data refresh commits" }
+        { "id": "tag", "label": "git tag v0.2.0 && git push --tags", "status": "green", "note": "tagged + pushed 2026-05-20" }
+      ]
+    },
+    {
+      "id": "v0_2_1_manual",
+      "label": "v0.2.1 \u2014 Query-zone facades + FTS5 input cap publish",
+      "status": "green",
+      "closed": "2026-05-20",
+      "semver_rationale": "Patch bump \u2014 code-additive only, no contract changes. Three thin kernel facades (query.getNeighbors, query.listContradictions, query.listInsights) over StructuredStore provider methods that already shipped in v0.2.0. Plus a defensive 10 KB input cap on buildFtsQuery in arcana-provider-libsql.",
+      "stages": [
+        { "id": "version_bump", "label": "Bump all 5 packages to 0.2.1", "status": "green", "note": "committed 282ffa7" },
+        { "id": "dry_run", "label": "pnpm publish -r --dry-run (verify workspace:* rewrites)", "status": "green", "note": "all 5 packages cleanly resolved workspace:* \u2192 ^0.2.1" },
+        { "id": "publish_all", "label": "pnpm publish -r --filter='./packages/*' --access public", "status": "green", "note": "OTP browser flow completed by user; all 5 packages live" },
+        { "id": "verify_contracts", "label": "npm view @kybernesis/arcana-contracts@0.2.1", "status": "green" },
+        { "id": "verify_core", "label": "npm view @kybernesis/arcana-core@0.2.1", "status": "green" },
+        { "id": "verify_libsql", "label": "npm view @kybernesis/arcana-provider-libsql@0.2.1", "status": "green" },
+        { "id": "verify_sqlite_vec", "label": "npm view @kybernesis/arcana-provider-sqlite-vec@0.2.1", "status": "green" },
+        { "id": "verify_testkit", "label": "npm view @kybernesis/arcana-testkit@0.2.1", "status": "green" },
+        { "id": "tag", "label": "git tag v0.2.1 && git push --tags", "status": "green", "note": "tagged + pushed 2026-05-20" }
       ]
     },
     {
