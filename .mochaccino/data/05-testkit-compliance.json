@@ -1,11 +1,11 @@
 {
   "angle": "matrix",
   "title": "Testkit Provider Compliance",
-  "subtitle": "Provider × compliance test — every implementer of a provider interface runs the same suite",
-  "purpose": "The contract claim: any provider in any package must pass arcana-testkit's runComplianceSuite. v0.2.0 ships with two providers (libsql for StructuredStore + sqlite-vec for VectorStore). 232 tests across 24 files.",
+  "subtitle": "Provider × compliance test + shared parity harness (since v0.3.0)",
+  "purpose": "The contract claim: any provider in any package must pass arcana-testkit's runComplianceSuite. v0.3.0 also ships runParityHarness — the shared comparison engine for ADR 009 consumer swaps. 249 tests across 25 files.",
   "generated": "2026-05-20",
   "system": "arcana",
-  "milestone": "v0.2.0",
+  "milestone": "v0.3.0",
   "status_legend": [
     { "id": "not_applicable", "symbol": "—", "label": "Not applicable to this provider" },
     { "id": "not_started", "symbol": "○", "label": "Not implemented" },
@@ -65,6 +65,31 @@
       "tests": [
         { "id": "connect", "label": "Open Convex client", "status": "not_started" },
         { "id": "store_get_roundtrip", "label": "storeMemory then getMemory returns the same Memory", "status": "not_started" }
+      ]
+    }
+  ],
+  "shared_utilities": [
+    {
+      "id": "parity-harness",
+      "label": "runParityHarness (since v0.3.0)",
+      "interface": "consumer swap test (per ADR 009)",
+      "status": "complete",
+      "closed": "2026-05-20",
+      "export_path": "@kybernesis/arcana-testkit/parity",
+      "purpose": "Generic top-N overlap harness for consumers swapping a working parallel implementation to the Arcana kernel equivalent. Required by ADR 009 before any swap merges.",
+      "defaults": { "topN": 10, "threshold": 0.8 },
+      "tests": [
+        { "id": "passing_case", "label": "default 0.8 threshold met → passes:true", "status": "passing" },
+        { "id": "failing_case", "label": "disjoint id sets → passes:false", "status": "passing" },
+        { "id": "boundary", "label": "exactly at threshold passes; just below fails", "status": "passing" },
+        { "id": "per_query_diff", "label": "missingFromCandidate + extraInCandidate reported correctly", "status": "passing" },
+        { "id": "baseline_error", "label": "baseline throws → error captured with side:'baseline'", "status": "passing" },
+        { "id": "candidate_error", "label": "candidate throws → error captured with side:'candidate'", "status": "passing" },
+        { "id": "empty_corpus", "label": "0 queries → meanOverlap:0, passes:false", "status": "passing" },
+        { "id": "custom_threshold", "label": "caller-supplied threshold honored", "status": "passing" },
+        { "id": "custom_topN", "label": "caller-supplied topN respected; ids beyond ignored", "status": "passing" },
+        { "id": "empty_ids", "label": "extractIds returning empty → 0 overlap", "status": "passing" },
+        { "id": "multi_query_avg", "label": "mean overlap averaged across queries", "status": "passing" }
       ]
     }
   ]

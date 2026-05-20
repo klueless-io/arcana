@@ -7,6 +7,20 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## v0.3.0 — 2026-05-20
+
+### Added — `@kybernesis/arcana-testkit` (new subpath: `./parity`)
+- `runParityHarness<TResult, TId>(input): Promise<ParityReport>` — generic top-N overlap harness for consumer swaps. Caller supplies a query corpus + two implementations (`baseline`, `candidate`) + an `extractIds` mapping; harness runs every query through both, computes per-query overlap, and aggregates a pass/fail report against a configurable threshold.
+- Default `topN: 10`, `threshold: 0.8` — matches the methodology spec in [ADR 009](./docs/decisions/009-parity-gate-for-consumer-swaps.md).
+- Per-query error capture: a failing baseline or candidate doesn't abort the run — the error is recorded with its `side` (`'baseline' | 'candidate'`) and that query contributes 0 to the mean overlap.
+- Empty corpus returns `passes: false` (cannot prove parity with no evidence).
+- 11 tests covering passing, failing, boundary, custom threshold/topN, error capture, empty corpus, and multi-query averaging.
+- Subpath export: `import { runParityHarness } from '@kybernesis/arcana-testkit/parity'`.
+
+### Notes
+- Realises ADR 009 §"Future evolution" — the shared harness named there. Consumers (KyberBot, Brain) bring their own fixtures + implementations; the harness handles the comparison logic.
+- Designed for the KyberBot hybrid-search swap blocked at top-10 overlap by the channel-topology divergence documented in `docs/plans/2026-05-20-tier1-tier2-facades-and-audits.md` Findings appendix.
+
 ## v0.2.1 — 2026-05-20
 
 ### Added — `@kybernesis/arcana-core` (query-zone facades)
