@@ -68,7 +68,7 @@
 <div class="header">
   <div class="wordmark">// <em>ARCANA</em> · PUBLISH PIPELINE</div>
   <h1>Publish Pipeline</h1>
-  <div class="tagline">v0.1.0 partial · v0.1.1 superseded · v0.2.0 superseded · v0.2.1 superseded · v0.3.0 live (parity harness in arcana-testkit, 2026-05-20) · CI-driven path defined but not wired</div>
+  <div class="tagline">v0.1.0 partial · v0.1.1 / v0.2.0 / v0.2.1 / v0.3.0 / v0.3.1 superseded · v0.4.0 live (hybridSearch rebase per ADR 011 port-first, 2026-05-21) · CI-driven path defined but not wired</div>
 </div>
 
 <div class="section-title">// PUBLISHED PACKAGES</div>
@@ -76,23 +76,23 @@
 <div class="pkg-strip">
   <div class="pkg-item">
     <div class="pkg-name">@kybernesis/arcana-contracts</div>
-    <div class="pkg-ver">v0.3.0</div>
+    <div class="pkg-ver">v0.4.0</div>
   </div>
   <div class="pkg-item">
     <div class="pkg-name">@kybernesis/arcana-core</div>
-    <div class="pkg-ver">v0.3.0</div>
+    <div class="pkg-ver">v0.4.0</div>
   </div>
   <div class="pkg-item">
     <div class="pkg-name">@kybernesis/arcana-testkit</div>
-    <div class="pkg-ver">v0.3.0</div>
+    <div class="pkg-ver">v0.4.0</div>
   </div>
   <div class="pkg-item">
     <div class="pkg-name">@kybernesis/arcana-provider-libsql</div>
-    <div class="pkg-ver">v0.3.0</div>
+    <div class="pkg-ver">v0.4.0</div>
   </div>
   <div class="pkg-item">
     <div class="pkg-name">@kybernesis/arcana-provider-sqlite-vec</div>
-    <div class="pkg-ver">v0.3.0</div>
+    <div class="pkg-ver">v0.4.0</div>
     <span class="pkg-new">new</span>
   </div>
 </div>
@@ -386,6 +386,56 @@
         <div class="step-status ss-green"></div>
         <div class="step-label">git tag v0.3.0</div>
         <div class="step-note">Tagged + pushed</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-title">// V0.4.0 — HYBRIDSEARCH REBASE PUBLISH (LIVE)</div>
+
+<div class="lane">
+  <div class="lane-header">
+    <div class="lane-label">v0.4.0 — pnpm publish -r — minor bump (hybridSearch rebased to KB-faithful 4-channel per ADR 011)</div>
+    <div class="lane-status ls-done">COMPLETE</div>
+  </div>
+  <div class="pipeline">
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-green"></div>
+        <div class="step-label">bump 5× versions</div>
+        <div class="step-note">0.3.1 → 0.4.0 (commit a9ae9f7)</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-green"></div>
+        <div class="step-label">pnpm publish --dry-run</div>
+        <div class="step-note">workspace:* → ^0.4.0 verified cleanly</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-green"></div>
+        <div class="step-label">pnpm publish -r</div>
+        <div class="step-note">OTP browser flow completed by user · all 5 packages live</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-green"></div>
+        <div class="step-label">verify v0.4.0</div>
+        <div class="step-note">npm view confirmed for all 5 packages</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-green"></div>
+        <div class="step-label">git tag v0.4.0</div>
+        <div class="step-note">Tagged + pushed 2026-05-21</div>
       </div>
     </div>
   </div>
