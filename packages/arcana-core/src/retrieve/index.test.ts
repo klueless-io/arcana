@@ -135,6 +135,7 @@ describe('factRetrieval', () => {
       accessCount: 0,
       isPinned: false,
       contentHash: 'abc12345',
+      createdAt: "2026-05-21T00:00:00.000Z",
       source: 'cli',
       status: 'active',
       isLatest: true,
@@ -161,6 +162,7 @@ describe('factRetrieval', () => {
       accessCount: 0,
       isPinned: false,
       contentHash: 'aaa11111',
+      createdAt: "2026-05-21T00:00:00.000Z",
       source: 'cli',
       status: 'active',
       isLatest: true,
@@ -177,6 +179,7 @@ describe('factRetrieval', () => {
       accessCount: 0,
       isPinned: false,
       contentHash: 'bbb22222',
+      createdAt: "2026-05-21T00:00:00.000Z",
       source: 'cli',
       status: 'active',
       isLatest: true,
@@ -205,6 +208,7 @@ describe('factRetrieval', () => {
       accessCount: 0,
       isPinned: false,
       contentHash: 'ccc33333',
+      createdAt: "2026-05-21T00:00:00.000Z",
       source: 'cli',
       status: 'active',
       isLatest: true,
@@ -245,6 +249,7 @@ const baseMemory = (overrides: Partial<Memory>): Memory => ({
   accessCount: 0,
   isPinned: false,
   contentHash: 'h',
+  createdAt: "2026-05-21T00:00:00.000Z",
   source: 'cli',
   status: 'active',
   isLatest: true,
@@ -289,7 +294,7 @@ describe('hybridSearch', () => {
     expect(result.data[0]?.graphScore).toBe(0);
   });
 
-  it('memory appearing in both keyword and semantic channels is marked multi', async () => {
+  it('memory appearing in both keyword and semantic channels is marked "both"', async () => {
     await structured.storeMemory(baseMemory({ id: 'mem_both', title: 'matched in both channels', content: 'kybernesis' }));
     await structured.storeMemory(baseMemory({ id: 'mem_kw_only', title: 'kybernesis only matched in keyword', content: 'kybernesis' }));
 
@@ -299,36 +304,103 @@ describe('hybridSearch', () => {
     const result = await api.hybridSearch({ query: 'kybernesis' });
     const both = result.data.find((r) => r.memory.id === 'mem_both');
     const kwOnly = result.data.find((r) => r.memory.id === 'mem_kw_only');
-    expect(both?.matchType).toBe('multi');
+    expect(both?.matchType).toBe('both');
     expect(both?.keywordScore).toBeGreaterThan(0);
     expect(both?.semanticScore).toBeGreaterThan(0);
+    expect(both?.graphScore).toBe(0);
     expect(kwOnly?.matchType).toBe('keyword');
     // Multi-channel item should outrank single-channel item under RRF
     expect(both!.score).toBeGreaterThan(kwOnly!.score);
   });
 
-  it('graph channel expands neighbors of seed memories', async () => {
-    await structured.storeMemory(baseMemory({ id: 'seed', title: 'sentinel anchor', content: 'sentinel' }));
-    await structured.storeMemory(baseMemory({ id: 'neighbor', title: 'unrelated', content: 'cabbage' }));
+  it('temporal channel contributes an RRF vote in addition to keyword', async () => {
+    // Single matching memory; verify its score reflects contributions from
+    // both the keyword channel AND the temporal channel (4-channel topology
+    // collapses to keyword-bucket score field, but the SUM in `score` carries
+    // both contributions).
+    await structured.storeMemory(baseMemory({
+      id: 'mem_recent',
+      title: 'kybernesis fresh',
+      content: 'kybernesis',
+      createdAt: '2026-05-21T00:00:00.000Z',
+    }));
+    const api = createRetrieve({ ...deps, vector: makeVector(), embed: makeEmbed() });
+    const result = await api.hybridSearch({ query: 'kybernesis' });
+    expect(result.data).toHaveLength(1);
+    const hit = result.data[0]!;
+    // Single-channel keyword RRF contribution at rank 0 = 1/(60+1) = 1/61.
+    // With temporal also contributing rank 0 = 1/61, total = 2/61.
+    const singleChannelRrf = 1 / 61;
+    expect(hit.score).toBeGreaterThan(singleChannelRrf * 1.5);
+    expect(hit.keywordScore).toBeGreaterThan(0);
+  });
+
+  it('newer memory ranks above older when both match keyword (temporal tiebreak)', async () => {
+    // Two memories match the keyword; the newer one matches MORE query tokens
+    // (so keyword channel ranks it first too) AND has a later createdAt (so
+    // temporal channel ranks it first). Both effects compound under RRF.
+    await structured.storeMemory(baseMemory({
+      id: 'mem_old',
+      title: 'kybernesis ancient',
+      content: 'kybernesis old',
+      createdAt: '2024-01-01T00:00:00.000Z',
+    }));
+    await structured.storeMemory(baseMemory({
+      id: 'mem_new',
+      title: 'kybernesis fresh sparkly',
+      content: 'kybernesis fresh sparkly',
+      createdAt: '2026-05-21T00:00:00.000Z',
+    }));
+    const api = createRetrieve({ ...deps, vector: makeVector(), embed: makeEmbed() });
+    const result = await api.hybridSearch({ query: 'kybernesis fresh sparkly' });
+    const newer = result.data.find((r) => r.memory.id === 'mem_new');
+    const older = result.data.find((r) => r.memory.id === 'mem_old');
+    expect(newer).toBeDefined();
+    expect(older).toBeDefined();
+    expect(newer!.score).toBeGreaterThan(older!.score);
+  });
+
+  it('entity-name-filter channel surfaces memories linked to matching entities', async () => {
+    // A memory unrelated to the query keyword, but linked via an entity name match.
+    await structured.storeMemory(baseMemory({
+      id: 'mem_linked',
+      title: 'unrelated title',
+      content: 'unrelated content',
+    }));
+    await structured.upsertEntity({
+      id: 'ent_kyb',
+      name: 'Kybernesis',
+      type: 'company',
+      mentionCount: 1,
+    });
     await structured.storeEdge({
-      id: 'edge_1',
-      from: { type: 'memory', id: 'seed' },
-      to: { type: 'memory', id: 'neighbor' },
-      relation: 'related',
+      id: 'edge_e',
+      from: { type: 'entity', id: 'ent_kyb' },
+      to: { type: 'memory', id: 'mem_linked' },
+      relation: 'mentioned-in',
       confidence: 1.0,
       sharedTags: [],
       method: 'manual',
-      createdAt: new Date().toISOString(),
+      createdAt: '2026-05-21T00:00:00.000Z',
     });
 
     const api = createRetrieve({ ...deps, vector: makeVector(), embed: makeEmbed() });
-    const result = await api.hybridSearch({ query: 'sentinel', graphHops: 1 });
+    const result = await api.hybridSearch({ query: 'kybernesis' });
     const ids = result.data.map((r) => r.memory.id);
-    expect(ids).toContain('seed');
-    expect(ids).toContain('neighbor');
-    const neighborResult = result.data.find((r) => r.memory.id === 'neighbor');
-    expect(neighborResult?.matchType).toBe('graph');
-    expect(neighborResult?.graphScore).toBeGreaterThan(0);
+    expect(ids).toContain('mem_linked');
+    const linked = result.data.find((r) => r.memory.id === 'mem_linked');
+    expect(linked?.matchType).toBe('keyword'); // entity channel collapses into keyword bucket per KB
+    expect(linked?.keywordScore).toBeGreaterThan(0);
+  });
+
+  it('graphHops parameter is accepted but ignored (deprecated since v0.4.0)', async () => {
+    await structured.storeMemory(baseMemory({ id: 'mem_a', title: 'kybernesis', content: 'kybernesis' }));
+    const api = createRetrieve({ ...deps, vector: makeVector(), embed: makeEmbed() });
+    const withHops = await api.hybridSearch({ query: 'kybernesis', graphHops: 5 });
+    const withoutHops = await api.hybridSearch({ query: 'kybernesis' });
+    expect(withHops.data.map((r) => r.memory.id)).toEqual(withoutHops.data.map((r) => r.memory.id));
+    // graphScore must be 0 on every result regardless of graphHops
+    for (const r of withHops.data) expect(r.graphScore).toBe(0);
   });
 
   it('respects topK', async () => {
@@ -379,5 +451,24 @@ describe('hybridSearch', () => {
     expect(result).toHaveProperty('generated_at');
     expect(result).toHaveProperty('data_age_ms', 0);
     expect(result).toHaveProperty('stale', false);
+  });
+
+  it('parity-harness smoke test — hybridSearch can be wired into runParityHarness', async () => {
+    // Sanity check that v0.4.0's hybridSearch can be supplied as a candidate
+    // to the parity harness shipped in v0.3.0. The real parity test (against
+    // KyberBot's actual hybrid-search.ts) lives in KyberBot's repo per ADR 009.
+    const { runParityHarness } = await import('@kybernesis/arcana-testkit/parity');
+    await structured.storeMemory(baseMemory({ id: 'mem_x', title: 'kybernesis', content: 'kybernesis' }));
+    const api = createRetrieve({ ...deps, vector: makeVector(), embed: makeEmbed() });
+    const queryFn = (input: unknown) =>
+      api.hybridSearch(input as { query: string });
+    const report = await runParityHarness({
+      queries: [{ id: 'q1', input: { query: 'kybernesis' } }],
+      baseline: queryFn,
+      candidate: queryFn,
+      extractIds: (r) => r.data.map((row) => row.memory.id),
+    });
+    expect(report.passes).toBe(true);
+    expect(report.meanOverlap).toBe(1);
   });
 });

@@ -19,6 +19,7 @@ const sampleMemory: Memory = {
   lastAccessedAt: '2026-05-18T08:00:00.000Z',
   isPinned: false,
   contentHash: 'abc123',
+  createdAt: "2026-05-21T00:00:00.000Z",
   source: 'cli',
   status: 'active',
   isLatest: true,

@@ -15,29 +15,40 @@ export interface HybridSearchInput {
   scopes?: Scopes;
   tier?: Tier;
   topK?: number;
+  /**
+   * @deprecated Since v0.4.0 (ADR 011 — port-first principle). Accepted for
+   * shape stability but silently ignored at runtime; the graph-BFS retrieval
+   * channel will return as v2 hybridSearch after parity is proven.
+   */
   graphHops?: number;
   rerank?: boolean;
 }
 
 /**
- * Wave-1 parity shape — mirrors KyberBot's existing hybrid-search result so
- * downstream callers can swap providers with minimal adaptation. A future
- * wave-2 evolution may switch to a nested `channels` object once consumers
- * are stable. See docs/plans/2026-05-20-fts-and-hybridsearch.md §4.
+ * Result shape — KyberBot-faithful (v0.4.0 rebase per ADR 011). Three channels
+ * collapse onto two exposed score fields: `semanticScore` carries the semantic
+ * channel's RRF contribution; `keywordScore` collapses the keyword (FTS),
+ * temporal, and entity-name-filter channels' contributions. `matchType` is
+ * `'semantic' | 'keyword' | 'both'` mirroring KyberBot's vocabulary.
+ *
+ * `graphScore` is retained as a deprecated zero-emitting field for shape
+ * stability — graph-BFS retrieval returns in a future v2 hybridSearch.
  */
 export interface HybridSearchResult {
   memory: Memory;
   /** Fused RRF score across all channels this memory appears in. */
   score: number;
-  /** Per-channel scores. 0 when the memory wasn't returned by that channel. */
+  /** Semantic channel RRF contribution. 0 when absent from this channel. */
   semanticScore: number;
+  /** Collapsed RRF contribution from keyword + temporal + entity channels. 0 when absent. */
   keywordScore: number;
+  /** @deprecated Since v0.4.0. Always 0; graph-BFS retrieval returns in v2. */
   graphScore: number;
-  matchType: 'semantic' | 'keyword' | 'graph' | 'multi';
+  matchType: 'semantic' | 'keyword' | 'both';
   why?: string;
 }
 
-/** RRF smoothing constant (de-facto standard). */
+/** RRF smoothing constant (de-facto standard; matches KyberBot hybrid-search.ts:70). */
 const RRF_K = 60;
 
 /** Reciprocal Rank Fusion contribution for an item at zero-based rank. */
@@ -84,15 +95,18 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
       input: HybridSearchInput,
     ): Promise<QueryResult<HybridSearchResult[]>> {
       const topK = input.topK ?? 10;
-      const graphHops = input.graphHops ?? 1;
+      // `graphHops` is deprecated since v0.4.0 (ADR 011). Accepted for shape
+      // stability; intentionally not destructured. Graph-BFS retrieval returns
+      // in v2 hybridSearch.
       const channelTopK = topK * 3;
 
-      // Per-channel ranked lists of memory ids. Empty arrays when a channel
-      // is unavailable or errors — fusion still works with one channel.
       let keywordIds: string[] = [];
       let semanticIds: string[] = [];
+      let temporalIds: string[] = [];
+      let entityIds: string[] = [];
 
-      // ── Keyword channel (FTS via StructuredStore) ─────────────────────
+      // ── Keyword channel (FTS via StructuredStore.searchFulltext) ─────
+      let keywordMemories: Memory[] = [];
       try {
         const matches = await deps.structured.searchFulltext(input.query, {
           scopes: input.scopes,
@@ -100,6 +114,11 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
           topK: channelTopK,
         });
         keywordIds = matches.map((m) => m.memoryId);
+        // Fetch memories once; reused by the temporal channel.
+        const fetched = await Promise.all(
+          keywordIds.map((id) => deps.structured.getMemory(id)),
+        );
+        keywordMemories = fetched.filter((m): m is Memory => m !== null);
       } catch (err) {
         deps.logger.debug('arcana.retrieve.hybridSearch.keyword-channel-failed', {
           error: (err as Error).message,
@@ -112,8 +131,6 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
         const vectorMatches = await deps.vector.query(embedding, {
           topK: channelTopK,
         });
-        // VectorStore returns chunk ids; metadata SHOULD carry memoryId.
-        // Fall back: skip entries without one (cannot route to a memory).
         const ids: string[] = [];
         for (const m of vectorMatches) {
           const memId =
@@ -128,52 +145,73 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
         });
       }
 
-      // ── Graph channel (BFS over neighbors of top keyword+semantic hits) ─
-      const graphIds: string[] = [];
-      if (graphHops > 0) {
-        const seeds = Array.from(new Set([...keywordIds.slice(0, 5), ...semanticIds.slice(0, 5)]));
-        const seenInGraph = new Set<string>([...keywordIds, ...semanticIds]);
-        let frontier = seeds;
-        for (let hop = 0; hop < graphHops; hop++) {
-          const nextFrontier: string[] = [];
-          for (const seedId of frontier) {
-            try {
-              const neighbors = await deps.structured.getNeighbors({
-                type: 'memory',
-                id: seedId,
-              });
-              for (const n of neighbors) {
-                if (n.type !== 'memory') continue;
-                if (seenInGraph.has(n.id)) continue;
-                seenInGraph.add(n.id);
-                graphIds.push(n.id);
-                nextFrontier.push(n.id);
-              }
-            } catch (err) {
-              deps.logger.debug('arcana.retrieve.hybridSearch.graph-hop-failed', {
-                seedId,
-                error: (err as Error).message,
-              });
-            }
-          }
-          frontier = nextFrontier;
-          if (frontier.length === 0) break;
-        }
+      // ── Temporal channel (same memories as keyword, ordered by createdAt DESC) ─
+      // KyberBot-faithful: temporal results are FTS keyword matches re-sorted
+      // by recency. Same memory ids, different RRF rank positions, contributing
+      // a second RRF vote to recent matches.
+      try {
+        temporalIds = [...keywordMemories]
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+          .map((m) => m.id)
+          .slice(0, channelTopK);
+      } catch (err) {
+        deps.logger.debug('arcana.retrieve.hybridSearch.temporal-channel-failed', {
+          error: (err as Error).message,
+        });
       }
 
-      // ── RRF fusion ───────────────────────────────────────────────────
+      // ── Entity-name-filter channel ───────────────────────────────────
+      // Tokenize the query; for each token, find entities whose name contains
+      // it; collect memory ids linked to those entities via the edges graph.
+      try {
+        const tokens = input.query
+          .toLowerCase()
+          .split(/\s+/)
+          .map((t) => t.replace(/[^\p{L}\p{N}]/gu, ''))
+          .filter((t) => t.length >= 3);
+
+        const seen = new Set<string>();
+        for (const token of tokens) {
+          const entities = await deps.structured.listEntities({
+            nameContains: token,
+            scopes: input.scopes,
+            limit: 20,
+          });
+          for (const e of entities) {
+            const neighbors = await deps.structured.getNeighbors({
+              type: 'entity',
+              id: e.id,
+            });
+            for (const n of neighbors) {
+              if (n.type !== 'memory') continue;
+              if (seen.has(n.id)) continue;
+              seen.add(n.id);
+              entityIds.push(n.id);
+            }
+          }
+        }
+        entityIds = entityIds.slice(0, channelTopK);
+      } catch (err) {
+        deps.logger.debug('arcana.retrieve.hybridSearch.entity-channel-failed', {
+          error: (err as Error).message,
+        });
+      }
+
+      // ── RRF fusion (4 channels, but exposed as 2 score fields per KB) ──
+      // KyberBot collapses keyword + temporal + entity contributions into a
+      // single `keywordScore` field (KB hybrid-search.ts:471–472). Semantic
+      // stays separate. `score` is the sum of all channel contributions.
       type Fused = {
         memoryId: string;
         score: number;
         semanticScore: number;
         keywordScore: number;
-        graphScore: number;
       };
       const fused = new Map<string, Fused>();
 
       const addChannel = (
         ids: string[],
-        channel: 'semantic' | 'keyword' | 'graph',
+        bucket: 'semantic' | 'keyword',
       ): void => {
         ids.forEach((id, rank) => {
           const contribution = rrfContribution(rank);
@@ -182,18 +220,22 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
             score: 0,
             semanticScore: 0,
             keywordScore: 0,
-            graphScore: 0,
           };
           existing.score += contribution;
-          if (channel === 'semantic') existing.semanticScore = contribution;
-          if (channel === 'keyword') existing.keywordScore = contribution;
-          if (channel === 'graph') existing.graphScore = contribution;
+          if (bucket === 'semantic') {
+            // semantic channel exclusive
+            existing.semanticScore = Math.max(existing.semanticScore, contribution);
+          } else {
+            // keyword bucket: keyword + temporal + entity all funnel here
+            existing.keywordScore = Math.max(existing.keywordScore, contribution);
+          }
           fused.set(id, existing);
         });
       };
       addChannel(keywordIds, 'keyword');
       addChannel(semanticIds, 'semantic');
-      addChannel(graphIds, 'graph');
+      addChannel(temporalIds, 'keyword');
+      addChannel(entityIds, 'keyword');
 
       const ranked = [...fused.values()].sort((a, b) => b.score - a.score).slice(0, topK);
 
@@ -202,21 +244,20 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
       for (const f of ranked) {
         const memory = await deps.structured.getMemory(f.memoryId);
         if (!memory) continue;
-        const channelCount =
-          (f.keywordScore > 0 ? 1 : 0) +
-          (f.semanticScore > 0 ? 1 : 0) +
-          (f.graphScore > 0 ? 1 : 0);
-        let matchType: HybridSearchResult['matchType'];
-        if (channelCount > 1) matchType = 'multi';
-        else if (f.keywordScore > 0) matchType = 'keyword';
-        else if (f.semanticScore > 0) matchType = 'semantic';
-        else matchType = 'graph';
+        const inSemantic = f.semanticScore > 0;
+        const inKeywordBucket = f.keywordScore > 0;
+        const matchType: HybridSearchResult['matchType'] =
+          inSemantic && inKeywordBucket
+            ? 'both'
+            : inSemantic
+              ? 'semantic'
+              : 'keyword';
         enriched.push({
           memory,
           score: f.score,
           semanticScore: f.semanticScore,
           keywordScore: f.keywordScore,
-          graphScore: f.graphScore,
+          graphScore: 0,
           matchType,
         });
       }
@@ -371,14 +412,22 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
       const topResults = scored.slice(0, topK);
 
       // 6. Return as QueryResult<HybridSearchResult[]>
+      // Note: factRetrieval's internal logic still uses getNeighbors for
+      // graph expansion (KyberBot's fact-retrieval.ts doesn't). This is a
+      // known divergence flagged by ADR 011; factRetrieval rebase to KB
+      // parity is a separate future sprint. For shape consistency in v0.4.0:
+      // graph-expanded hits collapse to 'keyword' matchType (no longer a
+      // distinct 'graph' value), graphScore is always 0.
       const results: HybridSearchResult[] = topResults.map((s) => ({
         memory: s.memory,
         score: s.score,
-        keywordScore: s.viaGraph ? 0 : s.score,
+        keywordScore: s.score,
         semanticScore: 0,
-        graphScore: s.viaGraph ? s.score : 0,
-        matchType: s.viaGraph ? 'graph' : 'keyword',
-        why: 'text-match (structured-only, no FTS5)',
+        graphScore: 0,
+        matchType: 'keyword',
+        why: s.viaGraph
+          ? 'text-match + graph expansion (structured-only)'
+          : 'text-match (structured-only, no FTS5)',
       }));
 
       return makeEnvelope(results);

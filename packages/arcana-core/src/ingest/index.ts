@@ -72,6 +72,7 @@ export function createIngest(deps: IngestDeps): IngestApi {
         tier: 'warm',
         decayScore: 0,
         accessCount: 0,
+        createdAt: new Date().toISOString(),
         isPinned: false,
         contentHash: djb2Hash(input.content),
         source: input.source,

@@ -17,6 +17,7 @@ const baseMemory = (): Memory => ({
   accessCount: 0,
   isPinned: false,
   contentHash: 'abc12345',
+  createdAt: "2026-05-21T00:00:00.000Z",
   source: 'cli',
   status: 'active',
   isLatest: true,

@@ -11,6 +11,7 @@ import type {
   AgentSelf,
   NodeRef,
   MemoryFilter,
+  EntityFilter,
   FulltextSearchOpts,
   FulltextMatch,
   FulltextField,
@@ -106,6 +107,24 @@ export function createFakeStructuredStore(): StructuredStore {
       entities.set(entity.id, entity);
     },
     getEntity: async (id: string) => entities.get(id) ?? null,
+    listEntities: async (filter?: EntityFilter) => {
+      let results = [...entities.values()];
+      if (filter?.nameContains) {
+        const needle = filter.nameContains.toLowerCase();
+        results = results.filter((e) => e.name.toLowerCase().includes(needle));
+      }
+      if (filter?.scopes) {
+        const wanted = filter.scopes;
+        results = results.filter((e) => {
+          const es = e.scopes ?? {};
+          if (wanted.org_id !== undefined && es.org_id !== wanted.org_id) return false;
+          if (wanted.project_id !== undefined && es.project_id !== wanted.project_id) return false;
+          return true;
+        });
+      }
+      if (filter?.limit !== undefined) results = results.slice(0, filter.limit);
+      return results;
+    },
     deleteEntity: async (id: string) => {
       entities.delete(id);
     },

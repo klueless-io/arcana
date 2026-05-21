@@ -221,6 +221,7 @@ describe('command.updateMemory', () => {
     accessCount: 0,
     isPinned: false,
     contentHash: djb2Hash('original content'),
+    createdAt: "2026-05-21T00:00:00.000Z",
     source: 'cli' as const,
     status: 'active' as const,
     isLatest: true,
@@ -315,6 +316,7 @@ describe('command.pin (now wraps updateMemory)', () => {
       accessCount: 0,
       isPinned: false,
       contentHash: djb2Hash('c'),
+      createdAt: "2026-05-21T00:00:00.000Z",
       source: 'cli',
     });
   });
@@ -340,6 +342,7 @@ describe('command.moveToTier (now wraps updateMemory)', () => {
       accessCount: 0,
       isPinned: false,
       contentHash: djb2Hash('c'),
+      createdAt: "2026-05-21T00:00:00.000Z",
       source: 'cli',
     });
   });
@@ -401,6 +404,7 @@ describe('command.markMemorySuperseded', () => {
     accessCount: 0,
     isPinned: false,
     contentHash: djb2Hash(content),
+    createdAt: "2026-05-21T00:00:00.000Z",
     source: 'chat' as const,
     status: 'active' as const,
     isLatest: true,

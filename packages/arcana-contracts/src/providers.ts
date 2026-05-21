@@ -65,6 +65,12 @@ export interface StructuredStore {
   // Entity
   upsertEntity(entity: Entity): Promise<void>;
   getEntity(id: string): Promise<Entity | null>;
+  /**
+   * Enumerate entities, optionally filtered by name substring (case-insensitive),
+   * scope, or limit. Used by the entity-name-filter retrieval channel in
+   * hybridSearch (KyberBot-faithful port — v0.4.0). Returning [] is valid.
+   */
+  listEntities(filter?: EntityFilter): Promise<Entity[]>;
   deleteEntity(id: string): Promise<void>;
 
   // Edge
@@ -129,6 +135,13 @@ export interface MemoryFilter {
   tier?: Tier;
   scopes?: Scopes;
   isPinned?: boolean;
+  limit?: number;
+}
+
+export interface EntityFilter {
+  /** Case-insensitive substring match on entity name. */
+  nameContains?: string;
+  scopes?: Scopes;
   limit?: number;
 }
 

@@ -35,6 +35,15 @@ export const MemorySchema = z
     tier: TierSchema,
     decayScore: z.number().min(0).max(1),
     accessCount: z.number().int().nonnegative(),
+    /**
+     * ISO-8601 timestamp of when this Memory was first written. Used by the
+     * temporal retrieval channel in hybridSearch (ordering by recency).
+     * Required since v0.4.0 (ADR 011 — port-first principle; KyberBot's
+     * timeline events carry a timestamp, so Arcana's memories must too).
+     * Set by `ingest.storeMemory` via `new Date().toISOString()` when the
+     * caller doesn't supply one.
+     */
+    createdAt: z.string().datetime(),
     lastAccessedAt: z.string().datetime().optional(),
     isPinned: z.boolean(),
     contentHash: z.string(),

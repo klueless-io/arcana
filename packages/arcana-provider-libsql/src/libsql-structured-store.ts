@@ -14,6 +14,7 @@ import type {
   AgentSelf,
   NodeRef,
   MemoryFilter,
+  EntityFilter,
   FulltextSearchOpts,
   FulltextMatch,
   FulltextField,
@@ -117,6 +118,7 @@ function rowToMemory(row: Row): Memory {
     tier: row.tier as Memory['tier'],
     decayScore: row.decay_score as number,
     accessCount: row.access_count as number,
+    createdAt: row.created_at as string,
     lastAccessedAt: (row.last_accessed_at as string | null) ?? undefined,
     isPinned: bool(row.is_pinned as number),
     contentHash: row.content_hash as string,
@@ -139,6 +141,7 @@ function memoryToRow(m: Memory): Row {
     tier: m.tier,
     decay_score: m.decayScore,
     access_count: m.accessCount,
+    created_at: m.createdAt,
     last_accessed_at: m.lastAccessedAt ?? null,
     is_pinned: int(m.isPinned),
     content_hash: m.contentHash,
@@ -239,6 +242,17 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
       }
       db = new Database(dbPath);
       db.exec(DDL);
+
+      // Idempotent migration: add created_at to memories if a v0.3.x database
+      // is being opened. PRAGMA table_info returns 0 rows on a freshly-created
+      // table only momentarily; after exec(DDL), the column already exists for
+      // new databases. The check is cheap and avoids throwing on duplicate-add.
+      const cols = db.prepare("PRAGMA table_info(memories)").all() as Array<{ name: string }>;
+      if (!cols.some((c) => c.name === 'created_at')) {
+        db.exec(
+          `ALTER TABLE memories ADD COLUMN created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
+        );
+      }
     },
 
     disconnect: async () => {
@@ -254,11 +268,11 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
       db.prepare(`
         INSERT OR REPLACE INTO memories
           (id, title, summary, content, tags, priority, tier, decay_score,
-           access_count, last_accessed_at, is_pinned, content_hash, source,
+           access_count, created_at, last_accessed_at, is_pinned, content_hash, source,
            status, is_latest, superseded_by, scopes)
         VALUES
           (@id, @title, @summary, @content, @tags, @priority, @tier, @decay_score,
-           @access_count, @last_accessed_at, @is_pinned, @content_hash, @source,
+           @access_count, @created_at, @last_accessed_at, @is_pinned, @content_hash, @source,
            @status, @is_latest, @superseded_by, @scopes)
       `).run(row);
     },
@@ -300,7 +314,8 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
         UPDATE memories SET
           title=@title, summary=@summary, content=@content, tags=@tags,
           priority=@priority, tier=@tier, decay_score=@decay_score,
-          access_count=@access_count, last_accessed_at=@last_accessed_at,
+          access_count=@access_count, created_at=@created_at,
+          last_accessed_at=@last_accessed_at,
           is_pinned=@is_pinned, content_hash=@content_hash, source=@source,
           status=@status, is_latest=@is_latest, superseded_by=@superseded_by, scopes=@scopes
         WHERE id=@id
@@ -368,6 +383,32 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
       assertConnected(db);
       const row = db.prepare('SELECT * FROM entities WHERE id=?').get(id) as Row | undefined;
       return row ? rowToEntity(row) : null;
+    },
+
+    listEntities: async (filter?: EntityFilter) => {
+      assertConnected(db);
+      let sql = 'SELECT * FROM entities WHERE 1=1';
+      const params: unknown[] = [];
+      if (filter?.nameContains) {
+        sql += ' AND LOWER(name) LIKE ?';
+        params.push(`%${filter.nameContains.toLowerCase()}%`);
+      }
+      if (filter?.limit !== undefined) {
+        sql += ' LIMIT ?';
+        params.push(filter.limit);
+      }
+      const rows = db.prepare(sql).all(...params) as Row[];
+      let results = rows.map(rowToEntity);
+      if (filter?.scopes) {
+        const wanted = filter.scopes;
+        results = results.filter((e) => {
+          const es = e.scopes ?? {};
+          if (wanted.org_id !== undefined && es.org_id !== wanted.org_id) return false;
+          if (wanted.project_id !== undefined && es.project_id !== wanted.project_id) return false;
+          return true;
+        });
+      }
+      return results;
     },
 
     deleteEntity: async (id: string) => {

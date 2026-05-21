@@ -43,6 +43,7 @@ describe('Provider interfaces', () => {
       accessCount: 0,
       isPinned: false,
       contentHash: 'h',
+      createdAt: "2026-05-21T00:00:00.000Z",
       source: 'cli',
     };
     await fake.storeMemory(memory);

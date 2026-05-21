@@ -30,6 +30,7 @@ describe('queryResultSchema', () => {
         accessCount: 0,
         isPinned: false,
         contentHash: 'hash',
+        createdAt: "2026-05-21T00:00:00.000Z",
         source: 'cli',
         status: 'active',
         isLatest: true,

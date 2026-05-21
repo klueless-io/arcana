@@ -7,6 +7,37 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## v0.4.0 — 2026-05-21
+
+### Architecture — [ADR 011](./docs/decisions/011-port-first-improve-later.md)
+- New governing principle: **port first, improve later.** Arcana's brain capabilities are sourced from KyberBot's working code. For every capability: port faithfully → swap consumer → verify 100% data parity → *then* improve in v2 (or behind a feature flag). Speculative redesigns no longer ship as the v1 implementation.
+
+### Changed — `@kybernesis/arcana-contracts`
+- `MemorySchema.createdAt: string` — new required field (ISO 8601). Set by `ingest.storeMemory` via `new Date().toISOString()` when the caller doesn't supply one. Needed by the temporal retrieval channel.
+- `StructuredStore.listEntities(filter?)` — new contract method. Filter shape `{ nameContains?, scopes?, limit? }`. Mirrors `listMemories`. Required by the entity-name-filter retrieval channel.
+- `EntityFilter` type — new interface for `listEntities`.
+- `HybridSearchResult.matchType` vocabulary restored to KyberBot-faithful `'semantic' | 'keyword' | 'both'`. The v0.2.0 invented values `'graph'` and `'multi'` are removed. (Breaking for any consumer relying on the removed values; KyberBot was not relying on them since its swap is still pending.)
+
+### Changed — `@kybernesis/arcana-core`
+- `retrieve.hybridSearch` — rebased onto KyberBot's empirical 4-channel topology (per ADR 011). Replaces the v0.2.0 invented 3-channel (semantic + keyword + graph-BFS) topology with KyberBot's (semantic + keyword + temporal + entity-name-filter). RRF k=60, per-channel topK*3, reranker pattern, per-channel failure isolation all preserved. KyberBot's score-bucket convention is honoured: keyword + temporal + entity contributions collapse into `keywordScore`; `semanticScore` stays separate.
+
+### Deprecated — `@kybernesis/arcana-core`
+- `HybridSearchInput.graphHops` — accepted for shape stability, ignored at runtime. Graph-BFS retrieval returns as v2 hybridSearch after KyberBot's parity gate proves.
+- `HybridSearchResult.graphScore` — always emitted as `0`. Same deprecation.
+
+### Changed — `@kybernesis/arcana-provider-libsql`
+- `memories` DDL adds `created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`.
+- Idempotent migration on `connect()`: existing v0.3.x databases get an `ALTER TABLE memories ADD COLUMN created_at` if the column is missing. Default fills historic rows with the migration moment's timestamp.
+- `listEntities(filter)` implemented over `entities` table with `LOWER(name) LIKE` substring match.
+
+### Changed — `@kybernesis/arcana-testkit`
+- Fake `createFakeStructuredStore` adds `listEntities` impl with the same filter semantics.
+
+### Notes
+- `retrieve.factRetrieval` still uses `getNeighbors` for graph expansion (Arcana-only; KyberBot's `fact-retrieval.ts` doesn't). This is a known port-first divergence flagged by ADR 011. `factRetrieval` rebase is a separate future sprint. The `matchType` collapses to `'keyword'` for both text-match and graph-expanded results in v0.4.0; the `why` field distinguishes them.
+- `getEntityProfile`'s broader scope (every entity vs KyberBot's user-only) is additive — KyberBot would query the user entity and receive the same data. No regression on swap. Stays as-is per ADR 011 §"What this means for past work."
+- The first application of ADR 011. Subsequent capability rebases (factRetrieval, sleep pipeline) will follow the same playbook.
+
 ## v0.3.1 — 2026-05-21
 
 ### Added — `@kybernesis/arcana-core` (block-zone facades)

@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS memories (
   tier TEXT NOT NULL DEFAULT 'warm',
   decay_score REAL NOT NULL DEFAULT 0,
   access_count INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   last_accessed_at TEXT,
   is_pinned INTEGER NOT NULL DEFAULT 0,
   content_hash TEXT NOT NULL,
