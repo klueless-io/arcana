@@ -162,8 +162,59 @@ Append to `~/dev/kybernesis/.comms/arcana-kyberbot.md`. Tells KyberBot:
 
 ## Findings appendix
 
-_Reserved for judgment calls surfaced during the port. Likely candidates:_
+Resolutions for the three judgment calls anticipated at planning time. All resolved during the port; no open questions carry forward.
 
-- *Memory-id dedup vs MAX_SEGMENTS_PER_PARENT*: KyberBot dedupes at chunk level then caps to 3 per parent. Arcana dedupes at memory level via `Map<memoryId, …>` — there's no parent/segment hierarchy in Arcana's data model. Likely the cap doesn't apply; document the equivalence.
-- *Temporal channel implementation against Arcana's `memories` table*: ~Resolved by adding `Memory.createdAt` in this sprint (see §2 Schema addition).~ Temporal channel orders by `created_at DESC`.
-- *Entity-name-filter against Arcana's data model*: KyberBot's `entity_mentions` table maps entities to memory paths. Arcana has `entities` + `edges`; entity-name matching can use `entity.name` LIKE query → edges to memory nodes. Behavioural equivalence to be confirmed during port.
+### Finding 1 — Memory-id dedup vs KyberBot's `MAX_SEGMENTS_PER_PARENT`
+
+**KyberBot's behavior**: dedupes search results at chunk level (each chunk is a "segment" of a longer source like a conversation) then caps the result set to `MAX_SEGMENTS_PER_PARENT = 3` segments per parent path (`kyberbot/packages/cli/src/brain/hybrid-search.ts:479–499`). This prevents a single long conversation from dominating the top-K with its own chunks at the expense of other content.
+
+**Arcana's data model**: memories are the unit of retrieval, not chunks. The `Chunk` schema exists (with `memoryId` linking back to the parent) but `hybridSearch` operates at the memory level — `searchFulltext` returns `FulltextMatch[]` with `memoryId`, not chunk ids. There is no parent/segment hierarchy to cap *inside* the hybridSearch path.
+
+**Resolution applied**: the `MAX_SEGMENTS_PER_PARENT` cap does not apply at Arcana's hybridSearch layer. Dedup happens at the memory-id level via the `fused = new Map<memoryId, Fused>()` map in the RRF fusion step — each memory contributes once per channel regardless of how many chunks it has. If a future chunk-level retrieval surface is added (e.g. a v2 hybridSearch that returns chunks for snippet display), the cap would apply there, not in the current memory-level API.
+
+**Code locations**: `packages/arcana-core/src/retrieve/index.ts` — the `fused` Map keyed by `memoryId` at the fusion step is the dedup mechanism; no parent-cap logic added.
+
+**Behavioural equivalence to KyberBot**: equivalent at the memory granularity that consumers see. A consumer asking "give me the top 10 memories" gets at most 10 distinct memories from each implementation; KyberBot's per-parent cap operates at a granularity Arcana doesn't expose, and its effect (preventing one parent from dominating) is automatic at the memory-id level since each memory is one entry.
+
+### Finding 2 — Temporal channel implementation against Arcana's `memories` table
+
+**KyberBot's behavior**: temporal channel orders FTS keyword matches by `timeline_events.timestamp DESC` to surface recent activity (`kyberbot/packages/cli/src/brain/hybrid-search.ts:396`). The temporal channel reuses keyword channel's *result set* with a different *ordering*.
+
+**Arcana's data model gap at planning time**: `memories` had `lastAccessedAt?` (optional) but no `createdAt`. The temporal channel could not be implemented faithfully without a memory creation timestamp.
+
+**Resolution applied**: added `Memory.createdAt: string` (ISO 8601, required) to `MemorySchema` as part of this sprint (see §2 Schema addition). `ingest.storeMemory` populates it via `new Date().toISOString()` when the caller doesn't supply one. libsql DDL gains `created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`; existing v0.3.x databases are migrated idempotently on `connect()` via `ALTER TABLE memories ADD COLUMN created_at`. The temporal channel orders by `createdAt DESC` (string ISO compare = chronological compare).
+
+**Code locations**:
+- Contract: `packages/arcana-contracts/src/memory.ts` — `createdAt: z.string().datetime()` field
+- Default population: `packages/arcana-core/src/ingest/index.ts` — `createdAt: new Date().toISOString()` in `storeMemory`
+- libsql DDL + migration: `packages/arcana-provider-libsql/src/schema.ts` + the `PRAGMA table_info`-gated `ALTER TABLE` in `libsql-structured-store.ts → connect()`
+- Temporal channel implementation: `packages/arcana-core/src/retrieve/index.ts` — sorts `keywordMemories` by `b.createdAt.localeCompare(a.createdAt)`
+
+**Behavioural equivalence to KyberBot**: equivalent — both implementations re-rank the keyword channel's results by recency to produce a second RRF vote weighted toward newer content.
+
+### Finding 3 — Entity-name-filter against Arcana's `entities` + `edges` (vs KyberBot's `entity_mentions`)
+
+**KyberBot's behavior**: queries `entity_mentions` table where `entity_mentions.entity_name LIKE '%token%'` for each query token; returns the linked `source_path` (memory pointer) for matches (`kyberbot/packages/cli/src/brain/hybrid-search.ts:400–403`). `entity_mentions` is a denormalised table that pairs entity names directly with memory paths.
+
+**Arcana's data model**: separates concerns across two tables — `entities` (id, name, type, ...) and `edges` (from, to, relation, ...). There is no equivalent denormalised "entity_mentions" table. Routing from entity-name match to memory ids requires:
+1. Enumerating entities whose name contains a query token
+2. For each matched entity, walking `edges` to find memory neighbors
+
+Step 1 had no public method on `StructuredStore` at planning time — only `getEntity(id)` and `upsertEntity(entity)`, no enumeration or name search.
+
+**Resolution applied**: added `StructuredStore.listEntities(filter?: EntityFilter)` to the contract. `EntityFilter` is `{ nameContains?: string; scopes?: Scopes; limit?: number }`. libsql implementation uses `WHERE LOWER(name) LIKE ?` with `%token%` substring match. Testkit fake mirrors with JS `String.includes`. The entity channel in `hybridSearch`:
+
+1. Tokenises the query (lowercase, strip non-alphanumeric, length ≥ 3 to match KyberBot's token-length floor)
+2. For each token, calls `listEntities({ nameContains: token, scopes: input.scopes, limit: 20 })`
+3. For each returned entity, calls `getNeighbors({ type: 'entity', id })` and filters to memory neighbors
+4. Collects memory ids (deduped), caps at `channelTopK`
+
+**Code locations**:
+- Contract: `packages/arcana-contracts/src/providers.ts` — `listEntities` on `StructuredStore`, `EntityFilter` type
+- libsql impl: `packages/arcana-provider-libsql/src/libsql-structured-store.ts` — `listEntities` using `LOWER(name) LIKE`
+- Testkit fake: `packages/arcana-testkit/src/fakes/structured-store.ts` — JS-side filter
+- Entity channel implementation: `packages/arcana-core/src/retrieve/index.ts` — the entity-channel block inside `hybridSearch`
+
+**Behavioural equivalence to KyberBot**: equivalent at the produced-memory-id-set level. The route differs (entities table + edges traversal vs entity_mentions direct lookup) but the SET of memory ids returned for a given query token is the same, provided the data has been correctly populated. The substring-match semantics on entity name (`LOWER(name) LIKE '%token%'`) are identical to KyberBot's.
+
+**Note**: this is a structural rather than logical port. KyberBot's `entity_mentions` is a denormalisation of (entity, edges-where-type=memory) into a single table; Arcana keeps the normalisation. If profiling later shows the two-step lookup is slow on large brains, a future v2 could add a denormalised `entity_memory_mentions` view/table to match KyberBot's shape — but for v1 parity, the normalised route is correct.
