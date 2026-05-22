@@ -15,14 +15,14 @@
     },
     "packages/arcana-contracts": {
       "name": "@kybernesis/arcana-contracts",
-      "version": "0.1.0",
+      "version": "0.5.0",
       "dependencies": {
         "zod": "^3.23.0",
       },
     },
     "packages/arcana-core": {
       "name": "@kybernesis/arcana-core",
-      "version": "0.1.0",
+      "version": "0.5.0",
       "dependencies": {
         "@kybernesis/arcana-contracts": "workspace:*",
         "zod": "^3.23.0",
@@ -34,15 +34,22 @@
     },
     "packages/arcana-provider-libsql": {
       "name": "@kybernesis/arcana-provider-libsql",
-      "version": "0.1.0",
+      "version": "0.5.0",
       "dependencies": {
         "@kybernesis/arcana-contracts": "workspace:*",
         "libsql": "0.5.29",
       },
     },
+    "packages/arcana-provider-llm-claude-code": {
+      "name": "@kybernesis/arcana-provider-llm-claude-code",
+      "version": "0.5.0",
+      "dependencies": {
+        "@kybernesis/arcana-contracts": "workspace:*",
+      },
+    },
     "packages/arcana-provider-sqlite-vec": {
       "name": "@kybernesis/arcana-provider-sqlite-vec",
-      "version": "0.1.0",
+      "version": "0.5.0",
       "dependencies": {
         "@kybernesis/arcana-contracts": "workspace:*",
         "better-sqlite3": "^12.4.1",
@@ -55,7 +62,7 @@
     },
     "packages/arcana-testkit": {
       "name": "@kybernesis/arcana-testkit",
-      "version": "0.1.0",
+      "version": "0.5.0",
       "dependencies": {
         "@kybernesis/arcana-contracts": "workspace:*",
       },
@@ -99,6 +106,8 @@
     "@kybernesis/arcana-core": ["@kybernesis/arcana-core@workspace:packages/arcana-core"],
 
     "@kybernesis/arcana-provider-libsql": ["@kybernesis/arcana-provider-libsql@workspace:packages/arcana-provider-libsql"],
+
+    "@kybernesis/arcana-provider-llm-claude-code": ["@kybernesis/arcana-provider-llm-claude-code@workspace:packages/arcana-provider-llm-claude-code"],
 
     "@kybernesis/arcana-provider-sqlite-vec": ["@kybernesis/arcana-provider-sqlite-vec@workspace:packages/arcana-provider-sqlite-vec"],
 
