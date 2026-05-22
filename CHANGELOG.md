@@ -7,6 +7,37 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## v0.5.0 — 2026-05-21
+
+### Added — `@kybernesis/arcana-provider-llm-claude-code` (new package)
+
+First concrete implementation of the `LLMProvider` contract. Subprocess-based wrapper around the Claude Code CLI (`claude -p`) — no API key required, uses the local Claude Code subscription.
+
+Faithful port of KyberBot's `claude.ts → completeSubprocess` path (`kyberbot/packages/cli/src/claude.ts:184-410`). Per [ADR 011](./docs/decisions/011-port-first-improve-later.md) (port-first) and [ADR 012](./docs/decisions/012-llm-provider-architecture.md) (LLM provider architecture: subprocess vs HTTP transport split).
+
+**Exports:**
+- `createClaudeCodeLLMProvider(opts?)` — factory returning an `LLMProvider`-conforming object.
+- `MODEL_IDS` — `{ haiku: 'claude-haiku-4-5', sonnet: 'claude-sonnet-4-6', opus: 'claude-opus-4-7' }` (mirrors KB `claude.ts:64-68`).
+- `ClaudeCodeProviderOptions`, `ClaudeCodeModel` — types.
+
+**Configuration:** `binary` (default `'claude'`), `defaultModel` (default `'haiku'`), `cwd` (for fleet-mode session-file attribution), `logger`.
+
+**Sunset note:** the `claude -p` invocation pattern is scheduled for deprecation around mid-2026. When the replacement invocation lands, this provider's internals migrate; the `LLMProvider` contract stays stable — consumers do not change.
+
+**Out of scope (deferred):**
+- Streaming (`onChunk`) — defer to a future v2 evolution.
+- Loop detection — defer with streaming.
+- In-process Agent SDK mode — KyberBot disabled it for memory-leak reasons (`claude.ts:91-96`); not needed here.
+- HTTP/API-key path — that is the separate `arcana-provider-llm-http` package (per ADR 012).
+
+### Changed — all existing packages bumped 0.4.1 → 0.5.0
+
+Version aligned across the workspace. No contract changes to existing packages — bump is for workspace coherence as the new 6th package joins at 0.5.0.
+
+### Tests
+
+262 → 275 (+13 new for the provider: happy path, default model, model mapping per shorthand × 3, cwd plumbing, stdin transport, `--dangerously-skip-permissions` always-on, system prompt, env scrubbing, non-zero exit, ENOENT, custom binary, logger).
+
 ## v0.4.1 — 2026-05-21
 
 ### Changed — `@kybernesis/arcana-core` — `retrieve.factRetrieval` rebased per ADR 011

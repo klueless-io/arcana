@@ -1,12 +1,12 @@
 {
   "angle": "card-grid",
   "title": "Arcana Package Graph",
-  "subtitle": "Five packages, their dependencies, and current build state",
-  "purpose": "Shows the v0.1.1 package layout and dependency direction. NOTE: arcana-config was merged into arcana-core (src/config/) on 2026-05-19, reducing the graph from 5 to 4. arcana-provider-sqlite-vec was added on 2026-05-20, bringing it back to 5.",
-  "generated": "2026-05-20",
+  "subtitle": "Six packages, their dependencies, and current build state",
+  "purpose": "Shows the v0.5.0 package layout and dependency direction. NOTE: arcana-config was merged into arcana-core (src/config/) on 2026-05-19. arcana-provider-sqlite-vec was added 2026-05-20 (vector). arcana-provider-llm-claude-code was added 2026-05-21 (LLM, subprocess transport per ADR 012).",
+  "generated": "2026-05-21",
   "system": "arcana",
-  "milestone": "v0.1.1",
-  "package_count": 5,
+  "milestone": "v0.5.0",
+  "package_count": 6,
   "status_legend": [
     { "id": "not_started", "symbol": "○", "label": "Not started" },
     { "id": "scaffolded", "symbol": "◐", "label": "Skeleton in place" },
@@ -83,6 +83,18 @@
       "test_count": 11,
       "note": "VectorStore via vec0 virtual table; rowid_ref companion pattern; :memory: testing; 11 tests. Added in v0.1.1 — was planned_packages in v0.1.0 data.",
       "v0_1_status": "complete"
+    },
+    {
+      "id": "arcana-provider-llm-claude-code",
+      "npm_name": "@kybernesis/arcana-provider-llm-claude-code",
+      "version": "0.5.0",
+      "role": "LLMProvider via Claude Code CLI subprocess (claude -p). No API key — uses local subscription. Faithful port of KyberBot claude.ts → completeSubprocess per ADR 011. First concrete LLMProvider impl, unblocks the sleep pipeline.",
+      "depends_on": ["@kybernesis/arcana-contracts (workspace)"],
+      "status": "complete",
+      "tasks": ["T-LLM-1"],
+      "closed": "2026-05-21",
+      "test_count": 13,
+      "note": "Subprocess transport per ADR 012. Sibling package arcana-provider-llm-http (multi-backend HTTP: Anthropic/OpenAI/Gemini/Ollama/OpenRouter) is queued, separate sprint."
     }
   ]
 }

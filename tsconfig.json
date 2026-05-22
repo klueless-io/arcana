@@ -6,6 +6,7 @@
     { "path": "packages/arcana-core" },
     { "path": "packages/arcana-testkit" },
     { "path": "packages/arcana-provider-libsql" },
-    { "path": "packages/arcana-provider-sqlite-vec" }
+    { "path": "packages/arcana-provider-sqlite-vec" },
+    { "path": "packages/arcana-provider-llm-claude-code" }
   ]
 }

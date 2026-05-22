@@ -68,7 +68,7 @@
 <div class="header">
   <div class="wordmark">// <em>ARCANA</em> · PUBLISH PIPELINE</div>
   <h1>Publish Pipeline</h1>
-  <div class="tagline">v0.1.0 partial · v0.1.1 / v0.2.0 / v0.2.1 / v0.3.0 / v0.3.1 superseded · v0.4.0 live (hybridSearch rebase per ADR 011 port-first, 2026-05-21) · CI-driven path defined but not wired</div>
+  <div class="tagline">v0.1.0 partial · v0.1.1–v0.4.0 superseded · v0.4.1 live (2026-05-21) · v0.5.0 staged — new arcana-provider-llm-claude-code + 5-pkg align, awaiting OTP</div>
 </div>
 
 <div class="section-title">// PUBLISHED PACKAGES</div>
@@ -93,6 +93,10 @@
   <div class="pkg-item">
     <div class="pkg-name">@kybernesis/arcana-provider-sqlite-vec</div>
     <div class="pkg-ver">v0.4.1</div>
+  </div>
+  <div class="pkg-item">
+    <div class="pkg-name">@kybernesis/arcana-provider-llm-claude-code</div>
+    <div class="pkg-ver">v0.5.0 (staged)</div>
     <span class="pkg-new">new</span>
   </div>
 </div>
@@ -436,6 +440,56 @@
         <div class="step-status ss-green"></div>
         <div class="step-label">git tag v0.4.0</div>
         <div class="step-note">Tagged + pushed 2026-05-21</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-title">// V0.5.0 — NEW LLM PROVIDER + 5-PKG ALIGN (STAGED, AWAITING OTP)</div>
+
+<div class="lane">
+  <div class="lane-header">
+    <div class="lane-label">v0.5.0 — pnpm publish -r — minor bump (new package @kybernesis/arcana-provider-llm-claude-code + 5-pkg version-align)</div>
+    <div class="lane-status ls-future">NOT STARTED</div>
+  </div>
+  <div class="pipeline">
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-green"></div>
+        <div class="step-label">bump 6× versions</div>
+        <div class="step-note">5 existing 0.4.1 → 0.5.0; new pkg starts at 0.5.0</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-missing"></div>
+        <div class="step-label">pnpm publish --dry-run</div>
+        <div class="step-note">Verify workspace:* → ^0.5.0 for the new package</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-missing"></div>
+        <div class="step-label">pnpm publish -r</div>
+        <div class="step-note">OTP browser flow — awaiting user</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-missing"></div>
+        <div class="step-label">verify v0.5.0</div>
+        <div class="step-note">npm view × 6 — incl new @kybernesis/arcana-provider-llm-claude-code</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+    <div class="step-wrap">
+      <div class="step">
+        <div class="step-status ss-green"></div>
+        <div class="step-label">git tag v0.5.0</div>
+        <div class="step-note">Tagged + pushed by goal-runner pre-publish</div>
       </div>
     </div>
   </div>

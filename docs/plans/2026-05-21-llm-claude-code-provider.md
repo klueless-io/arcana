@@ -194,14 +194,77 @@ Append to `~/dev/kybernesis/.comms/arcana-kyberbot.md`. Tells KyberBot:
 
 ## Findings appendix
 
-_Populated by the goal-runner during the port. Likely judgment-call areas:_
+_Populated 2026-05-21 by the goal-runner during the port. Each resolution cites KB file:line and Arcana code location._
 
-- **Subprocess invocation pattern** — does KB pass prompt via argv (`claude -p "..."`) or via stdin (`echo "..." | claude -p`)? Determines argv shape and pipe wiring.
-- **Model-flag syntax** — `--model claude-haiku-4-5` vs `--model haiku` vs no flag (subscription default). Read KB's actual subprocess construction.
-- **`maxTokens` plumbing** — does KB pass it via argv flag, env var, or not at all in subprocess mode?
-- **System prompt mechanism** — argv flag, stdin prefix, or skipped in subprocess?
-- **`cwd` resolution** — KB uses CWD for fleet-mode project attribution. Confirm Arcana's exposure matches.
-- **Error surface** — does KB throw, return null, or log on subprocess failure? Match its pattern.
-- **`-p` deprecation horizon note** — confirm the deprecation note (mid-2026) is recorded in the README + CHANGELOG so future-us knows the internals will migrate when CC's replacement invocation lands.
+### F-1. Subprocess invocation pattern — **stdin, not argv**
 
-Each resolution cites KyberBot file:line and the Arcana code location.
+KB pipes the prompt to stdin (`kyberbot/packages/cli/src/claude.ts:220-223`) and uses the literal `-` argv token to mark "read prompt from stdin". The comment at `claude.ts:203-204` explains why: argv would hit `ARG_MAX` on large conversation histories + system prompts.
+
+**Arcana resolution**: same pattern. Argv = `['--print', '-', '--dangerously-skip-permissions', ...]`; prompt written to `proc.stdin` then `end()`. Code: `packages/arcana-provider-llm-claude-code/src/index.ts` — see the `args` construction and the `proc.stdin.write(prompt)` block. Test covers it: `'passes the prompt via stdin (not argv) to avoid ARG_MAX'`.
+
+### F-2. Model-flag syntax — **`--model <full-id>`, resolved from shorthand**
+
+KB's subprocess pattern (`claude.ts:196-198`) passes `opts.model` (the shorthand string `'haiku' | 'sonnet' | 'opus'`) directly to `--model`. The `MODEL_IDS` mapping at `claude.ts:64-68` is only used by SDK mode (`claude.ts:155, 172`).
+
+**Arcana resolution**: small port-time improvement — Arcana resolves the shorthand to the full model ID before passing to `--model`. Both forms work with the CLI, but the full ID is more explicit and stable across CLI versions. Tests assert `--model claude-haiku-4-5` (etc.) appears in argv. Code: `index.ts` lines under `MODEL_IDS` and `args.push('--model', modelId)`. Documented as a deliberate deviation (per ADR 011 we allow this kind of "explicit-over-implicit" port improvement when the contract surface doesn't change).
+
+### F-3. `maxTokens` plumbing — **not exposed in subprocess transport**
+
+KB passes `max_tokens` to the SDK (`claude.ts:158`) but **does not** pass any token cap to the subprocess invocation. The `claude -p` CLI surfaces `--max-turns` (passed at `claude.ts:199-201` only when `opts.maxTurns` is set), not `--max-tokens`.
+
+**Arcana resolution**: `LLMCompleteOpts.maxTokens` is accepted by the contract but **ignored** in this provider, matching KB's actual behaviour for subprocess mode. Documented in the README under "What's NOT supported (yet)". When `arcana-provider-llm-http` ships, that transport will honour `maxTokens` per the HTTP backends' native parameter.
+
+### F-4. System prompt mechanism — **`--system-prompt <X>` argv flag**
+
+KB uses `--system-prompt` (`claude.ts:193-195`): `if (opts.system) { args.push('--system-prompt', opts.system); }`.
+
+**Arcana resolution**: identical pattern. Code: `index.ts` `if (callOpts.system) { args.push('--system-prompt', callOpts.system); }`. Test: `'passes opts.system through --system-prompt'`.
+
+### F-5. `cwd` resolution — **factory-level only; passed to spawn options**
+
+KB threads `cwd` as a per-call option (`claude.ts:47, 216`) so callers in fleet mode can attribute each LLM call to a specific agent's project directory (`~/.claude/projects/<slug>`).
+
+**Arcana resolution**: provider-level option (`ClaudeCodeProviderOptions.cwd`). This is a slight contract simplification — Arcana's `LLMProvider.complete()` signature has no `cwd` per-call. Consumers that need per-agent attribution wire a separate provider instance per agent (cheap — a provider is a closure over options). Test: `'honors factory-level cwd in spawn options'`.
+
+### F-6. Error surface — **throw with stderr preview**
+
+KB's subprocess close-handler (`claude.ts:399-401`) on non-zero exit (without a streamed result) does:
+```
+reject(new Error(`claude subprocess failed: ${stderr.slice(0, 500) || ...}`))
+```
+On spawn error (`claude.ts:404-408`) — typically `ENOENT` from missing binary — KB rejects with:
+```
+reject(new Error(`Failed to spawn claude: ${err.message}. Is Claude Code installed?`))
+```
+
+**Arcana resolution**: same shape on both paths. Code: the `proc.on('close')` and `proc.on('error')` handlers in `index.ts`. ENOENT gets a dedicated friendly message (`'not found on PATH. Is Claude Code installed?'`). Tests cover both: `'rejects with stderr preview on non-zero exit'` and `'rejects with a helpful message when binary is not found (ENOENT)'`.
+
+### F-7. `-p` deprecation horizon — **recorded in README + CHANGELOG**
+
+Anthropic / Claude Code has signalled deprecation of the `claude -p` invocation pattern around **mid-2026**. When the replacement invocation lands, the *internals* of this provider migrate; the public `LLMProvider` contract stays stable; consumers do not change their wiring.
+
+**Arcana resolution**: recorded in three places — `packages/arcana-provider-llm-claude-code/README.md` ("Sunset note" section), `CHANGELOG.md` v0.5.0 entry, and a top-of-file comment in `src/index.ts`. ADR 012's "Sunset note" paragraph already documented the architectural decision.
+
+### F-8. Env scrubbing — **`CLAUDECODE` and `CLAUDE_CODE_ENTRYPOINT` set to empty**
+
+KB unsets these two env vars in the spawn options (`claude.ts:208-210`) to prevent Claude Code from detecting that it's being invoked from inside another Claude Code session (which changes behaviour around session attribution and tool availability).
+
+**Arcana resolution**: identical. Code: `index.ts` spawn options `env: { ...process.env, CLAUDECODE: '', CLAUDE_CODE_ENTRYPOINT: '' }`. Test: `'unsets CLAUDECODE / CLAUDE_CODE_ENTRYPOINT to avoid nested-invocation detection'`.
+
+### F-9. `--dangerously-skip-permissions` — **always-on (headless)**
+
+KB always passes this flag in subprocess mode (`claude.ts:189`) with the rationale "subprocesses are headless, no human to prompt". Without it, any tool-call permission gate would deadlock the subprocess.
+
+**Arcana resolution**: identical — always passed, not configurable. Test: `'always passes --dangerously-skip-permissions (headless subprocess)'`.
+
+### F-10. Per-call model override — **deliberately omitted (contract limit)**
+
+The `LLMCompleteOpts` contract surface (`arcana-contracts/src/providers.ts`) is `{ temperature?, maxTokens?, system? }` — no `model` field. So per-call model selection is not exposed.
+
+**Arcana resolution**: `defaultModel` is set at factory time; the contract's `complete()` does not accept a per-call model override. Consumers that need per-call routing wire multiple provider instances (one per model). This matches the contract's design intent and keeps the swap-in-swap-out story clean for the eventual reranker-utility-on-top-of-LLMProvider pattern from ADR 012.
+
+### F-11. `temperature` — **silently ignored (CLI has no flag)**
+
+`claude -p` exposes no `--temperature` flag. The accepted `LLMCompleteOpts.temperature` is therefore ignored in this provider.
+
+**Arcana resolution**: documented in README under "What's NOT supported (yet)". Future HTTP-transport provider (`arcana-provider-llm-http`) will honour it natively per backend.

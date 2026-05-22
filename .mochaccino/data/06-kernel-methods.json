@@ -207,7 +207,8 @@
     "total_kernel_methods_catalogued": 28,
     "write_parity_percent": 100,
     "read_parity_percent": 100,
-    "test_counts": { "tests": 262, "files": 25, "packages": 5, "all_passing": true },
+    "test_counts": { "tests": 275, "files": 26, "packages": 6, "all_passing": true },
+    "llm_provider_sprint": "v0.5.0 sprint 2026-05-21 landed: arcana-provider-llm-claude-code (new package). Subprocess transport per ADR 012. Faithful port of KyberBot claude.ts → completeSubprocess. No API key — uses local Claude Code subscription. First concrete LLMProvider impl. Unblocks sleep pipeline. Sibling arcana-provider-llm-http (multi-backend HTTP) queued, separate sprint.",
     "arcana_config_merge": "arcana-config package DELETED 2026-05-19; merged into arcana-core src/config/.",
     "fts_hybridsearch_sprint": "Sprint 2026-05-20 landed: searchFulltext contract + libsql FTS5 impl + kernel hybridSearch (RRF k=60) + queryFacts asOf + ADR 009 (parity gate) + ADR 010 (sleep step gap). KyberBot untouched per ADR 009 deferred-swap principle.",
     "easy_facade_sprint": "Follow-on sprint 2026-05-20 (v0.2.1) landed: getNeighbors + listContradictions + listInsights kernel facades (thin wrappers over already-implemented provider methods). Tier 2 audits run in parallel: (a) FTS5 syntax-injection audit — clean, 10KB input cap added defensively; (b) hybridSearch vs KyberBot parity cross-check — shape parity holds, channel topology diverges (Arcana 3-channel vs KyberBot 4-channel), top-N overlap expected 60–75% on parity test, documented in docs/plans/2026-05-20-tier1-tier2-facades-and-audits.md.",
@@ -221,7 +222,7 @@
     "kyberbot_modules_remaining": 5,
     "kyberbot_provider_adapters_built": ["OpenAIEmbeddingProvider", "ChromaDBVectorStore"],
     "contracts_ahead_of_kernel": ["expiresAt — now surfaced via queryFacts asOf (2026-05-20)", "surprisalScore — still unreachable; lands with sleep pipeline", "lastReinforcedAt — still unreachable; lands with sleep pipeline"],
-    "providers_shipping": ["arcana-provider-libsql (StructuredStore + FTS5)", "arcana-provider-sqlite-vec (VectorStore)"],
+    "providers_shipping": ["arcana-provider-libsql (StructuredStore + FTS5)", "arcana-provider-sqlite-vec (VectorStore)", "arcana-provider-llm-claude-code (LLMProvider, subprocess)"],
     "providers_planned": ["arcana-provider-postgres (Brain migration blocker; FTS via tsvector to satisfy searchFulltext contract)"],
     "brain_migration_blockers": [
       "5 Convex artifacts to shed (4-flat-ID edges, shadow rows, _creationTime, reactive queries, loose enum vocab)",
