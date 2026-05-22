@@ -7,6 +7,36 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## v1.0.0 — 2026-05-22
+
+Schema deepening + Layer 0 fact-FTS + rich-bundle retrieval. All 6 packages bumped to v1.0.0 as one cohort. Per [ADR 013](./docs/decisions/013-fact-schema-deepening-before-sleep.md) (sequencing) and [ADR 011](./docs/decisions/011-port-first-improve-later.md) (port-first). KB sources of truth: `kyberbot/packages/cli/src/brain/fact-store.ts` + `fact-retrieval.ts` + `fact-extractor.ts`.
+
+### Breaking — `@kybernesis/arcana-contracts`
+
+1. **`FactSchema.entity` (string) → `FactSchema.entities` (string[])** — facts now carry a denormalised list of entity names (matches KB `fact-store.ts:38-46`). Minimum 1 entity required. Migration helper `widenLegacyFact(old)` exported to wrap a pre-v1.0.0 `LegacyFact` into the new shape.
+2. **`FactSchema.category` is required** — `FactCategorySchema` enum has 8 members (`biographical | preference | event | relationship | temporal | opinion | plan | general`) ported verbatim from KB. Extractors default to `'general'` when unclassified.
+3. **Source backlinks added** — `sourceMemoryId?`, `sourcePath?`, `sourceConversationId?` are now optional fields on every Fact. Enables Layer 0 → memory fan-out in factRetrieval.
+4. **`StructuredStore.searchFactsFulltext(query, opts)`** — new contract method. libsql implements via FTS5 over `facts_fts(content, entities)`. Returns scored `FactsFulltextMatch[]` with `matchedFields: ('content'|'entities')[]`. Supports `category` + `latestOnly` (default `true`) filters.
+5. **`StructuredStore.getFact(id)`** — new contract method. Returns `Fact | null`. Needed by factRetrieval's Layer 0 to resolve fact-FTS hits into the rich `ScoredFact` bundle.
+
+### Breaking — `@kybernesis/arcana-core`
+
+- **`factRetrieval` return shape**: was `QueryResult<HybridSearchResult[]>`, now `QueryResult<FactRetrievalResult>` where `FactRetrievalResult = { facts: ScoredFact[]; supportingMemories: HybridSearchResult[]; assembledContext: string; tokenEstimate: number; stats: { perLayerCounts, totalCandidates, deduplicatedCount } }`. Field names mirror KB `fact-retrieval.ts:31-59` (`FactSearchResult`). Token estimate = `Math.ceil(assembledContext.length / 4)` (KB convention from `fact-retrieval.ts:65-67`).
+- **`factRetrieval` adds Layer 0** — direct fact-FTS via `searchFactsFulltext` runs before the existing memory layers. Layer-0 hits with `sourceMemoryId` fan out into `supportingMemories` with `why: 'fact-retrieval/direct_facts'`. Source-layer priority: `bridge > direct_facts > direct > entity_expansion > graph_expansion`.
+- **`command.recordFact` input** — `entity: string` replaced with `entities: string[]`. `category?` (defaults to `'general'`), `sourceMemoryId?`, `sourcePath?`, `sourceConversationId?` now accepted.
+- **`ingest.extractFacts(memoryId)` added** — port of KB `fact-extractor.ts:38-163` (`extractFactsRealtime`). Drives the LLMProvider with the verbatim `REALTIME_FACT_PROMPT`, parses the JSON array, validates each fact (rejects empty `entities[]`, caps to 3 per memory, defaults invalid `category` to `'general'`, caps confidence ≤ 0.9), and persists with `sourceMemoryId` backlink. Never throws — LLM/parse failures yield `[]`.
+
+### Breaking — `@kybernesis/arcana-provider-libsql`
+
+- `facts` table widened: new columns `entities_json`, `source_memory_id`, `source_path`, `source_conversation_id`, `category` (default `'general'`).
+- New indices: `idx_facts_category`, `idx_facts_source_memory_id`, `idx_facts_source_conv`.
+- New `facts_fts` FTS5 virtual table over `(content, entities)` with INSERT/UPDATE/DELETE triggers mirroring KB `fact-store.ts:213-225`. `storeFact` issues an explicit pre-DELETE on the FTS shadow row before INSERT OR REPLACE — libsql's FTS5 doesn't always clean shadow rows on conflict-replace.
+- `getFactsForEntity` now matches against `entities_json` (case-insensitive LIKE with false-positive post-filter).
+
+### Migration
+
+Pre-v1.0.0 facts persisted in a v0.5.x libsql database have an `entity` column but no `entities_json`. There is no automatic in-place migration in this release — fact-bearing consumers must replay extraction or use `widenLegacyFact` in code. New databases start with the v1.0.0 schema directly.
+
 ## v0.5.0 — 2026-05-21
 
 ### Added — `@kybernesis/arcana-provider-llm-claude-code` (new package)

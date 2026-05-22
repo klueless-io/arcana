@@ -13,6 +13,7 @@ import {
   type Edge,
   type Scopes,
   type FactSourceType,
+  type FactCategory,
   type StructuredStore,
   type VectorStore,
   type Logger,
@@ -21,20 +22,29 @@ import { NotImplementedError } from '../../errors.js';
 import { djb2Hash } from '../../util/hash.js';
 
 /**
- * Input for `command.recordFact`. Mirrors the corrected `Fact` schema:
- * - `fact` (sentence form) and `entity` (subject) are required.
- * - `attribute` and `value` (triple decomposition) are optional and only
- *   populated when the upstream extractor produced them.
- *
- * See ADR 004 for the rationale.
+ * Input for `command.recordFact`. Mirrors the v1.0.0 `Fact` schema (ADR 013):
+ * - `fact` (sentence form) is required.
+ * - `entities` (denormalised list of entity names this fact mentions) — at
+ *   least one entity required.
+ * - `category` defaults to `'general'` when omitted (matches KB extractor
+ *   convention).
+ * - `attribute` and `value` (triple decomposition) remain optional per
+ *   ADR 004.
+ * - `sourceMemoryId` / `sourcePath` / `sourceConversationId` are backlinks
+ *   for provenance + Layer-0 fact-FTS fan-out.
  */
 export interface RecordFactInput {
   fact: string;
-  entity: string;
+  entities: string[];
   attribute?: string;
   value?: string;
   confidence: number;
   sourceType: FactSourceType;
+  /** Defaults to 'general' when omitted. */
+  category?: FactCategory;
+  sourceMemoryId?: string;
+  sourcePath?: string;
+  sourceConversationId?: string;
   expiresAt?: string;
   scopes?: Scopes;
 }
@@ -191,11 +201,15 @@ export function createCommand(deps: CommandDeps): CommandApi {
       const candidate: Fact = {
         id: randomUUID(),
         fact: input.fact,
-        entity: input.entity,
+        entities: input.entities,
         attribute: input.attribute,
         value: input.value,
         confidence: input.confidence,
         sourceType: input.sourceType,
+        sourceMemoryId: input.sourceMemoryId,
+        sourcePath: input.sourcePath,
+        sourceConversationId: input.sourceConversationId,
+        category: input.category ?? 'general',
         createdAt: new Date().toISOString(),
         isLatest: true,
         expiresAt: input.expiresAt,
@@ -205,7 +219,8 @@ export function createCommand(deps: CommandDeps): CommandApi {
       await deps.structured.storeFact(validated);
       deps.logger.debug('arcana.command.recordFact', {
         id: validated.id,
-        entity: validated.entity,
+        entities: validated.entities,
+        category: validated.category,
         hasTripleDecomposition:
           validated.attribute !== undefined && validated.value !== undefined,
       });

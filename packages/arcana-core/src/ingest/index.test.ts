@@ -95,3 +95,116 @@ describe('ingest.ingestDocument', () => {
     ).rejects.toThrow(NotImplementedError);
   });
 });
+
+// ---------------------------------------------------------------------------
+// extractFacts — KB-faithful real-time fact extraction (v1.0.0 / ADR 013)
+// ---------------------------------------------------------------------------
+
+describe('ingest.extractFacts (v1.0.0)', () => {
+  // The fake LLM provider echoes the prompt. We override `complete` per-test
+  // to return a chosen JSON response, simulating the LLM extraction step.
+  const makeLLM = (response: string) => ({
+    model: 'fake',
+    complete: async () => response,
+  });
+
+  const seedMemory = async (overrides: Partial<{
+    id: string;
+    content: string;
+    tags: string[];
+    scopes: { org_id?: string; project_id?: string };
+  }> = {}) => {
+    const id = await api.storeMemory({
+      content:
+        overrides.content ??
+        'A long enough conversation that Alice met Bob in Paris during summer 2026 to discuss the merger.',
+      source: 'chat',
+      tags: overrides.tags ?? [],
+      scopes: overrides.scopes,
+    });
+    return id;
+  };
+
+  it('persists facts with v1.0.0 fields (entities[], category, sourceMemoryId)', async () => {
+    deps.llm = makeLLM(JSON.stringify([
+      {
+        content: 'Alice met Bob in Paris during summer 2026',
+        category: 'event',
+        confidence: 0.85,
+        entities: ['Alice', 'Bob', 'Paris'],
+      },
+    ]));
+    api = createIngest(deps);
+    const memId = await seedMemory({ tags: ['conversation:conv_99'] });
+    const facts = await api.extractFacts(memId);
+    expect(facts).toHaveLength(1);
+    expect(facts[0]!.entities).toEqual(['Alice', 'Bob', 'Paris']);
+    expect(facts[0]!.category).toBe('event');
+    expect(facts[0]!.sourceMemoryId).toBe(memId);
+    expect(facts[0]!.sourceConversationId).toBe('conv_99');
+    expect(facts[0]!.sourceType).toBe('ai-extraction');
+  });
+
+  it('rejects facts with empty entities[]', async () => {
+    deps.llm = makeLLM(JSON.stringify([
+      { content: 'X happened sometime', category: 'event', confidence: 0.7, entities: [] },
+      { content: 'Real fact with entities included', category: 'event', confidence: 0.7, entities: ['Carol'] },
+    ]));
+    api = createIngest(deps);
+    const memId = await seedMemory();
+    const facts = await api.extractFacts(memId);
+    expect(facts).toHaveLength(1);
+    expect(facts[0]!.entities).toEqual(['Carol']);
+  });
+
+  it('defaults invalid/unknown category to "general"', async () => {
+    deps.llm = makeLLM(JSON.stringify([
+      {
+        content: 'David likes a strong cup of espresso',
+        category: 'made-up-category',
+        confidence: 0.8,
+        entities: ['David'],
+      },
+    ]));
+    api = createIngest(deps);
+    const memId = await seedMemory();
+    const facts = await api.extractFacts(memId);
+    expect(facts).toHaveLength(1);
+    expect(facts[0]!.category).toBe('general');
+  });
+
+  it('returns [] when LLM returns no JSON array', async () => {
+    deps.llm = makeLLM('I cannot find facts here.');
+    api = createIngest(deps);
+    const memId = await seedMemory();
+    expect(await api.extractFacts(memId)).toEqual([]);
+  });
+
+  it('skips memories shorter than 50 chars (KB guard)', async () => {
+    deps.llm = makeLLM(JSON.stringify([
+      { content: 'should not be reached', category: 'event', confidence: 0.7, entities: ['X'] },
+    ]));
+    api = createIngest(deps);
+    const memId = await seedMemory({ content: 'too short' });
+    expect(await api.extractFacts(memId)).toEqual([]);
+  });
+
+  it('returns [] for unknown memory id', async () => {
+    expect(await api.extractFacts('mem_does_not_exist')).toEqual([]);
+  });
+
+  it('caps to first 3 facts (KB pattern)', async () => {
+    deps.llm = makeLLM(JSON.stringify(
+      Array.from({ length: 6 }, (_, i) => ({
+        content: `Concrete fact number ${i} about Alpha and Beta entities`,
+        category: 'general',
+        confidence: 0.7,
+        entities: ['Alpha', 'Beta'],
+      })),
+    ));
+    api = createIngest(deps);
+    const memId = await seedMemory();
+    const facts = await api.extractFacts(memId);
+    expect(facts).toHaveLength(3);
+  });
+});

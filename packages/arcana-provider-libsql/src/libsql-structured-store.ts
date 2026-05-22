@@ -18,6 +18,9 @@ import type {
   FulltextSearchOpts,
   FulltextMatch,
   FulltextField,
+  FactsFulltextSearchOpts,
+  FactsFulltextMatch,
+  FactsFulltextField,
 } from '@kybernesis/arcana-contracts';
 import { DDL } from './schema.js';
 
@@ -52,6 +55,12 @@ function assertConnected(
 // ─── fulltext helpers ────────────────────────────────────────────────────────
 
 const FTS_FIELDS: readonly FulltextField[] = ['title', 'summary', 'content', 'tags'] as const;
+const FACTS_FTS_FIELDS: readonly FactsFulltextField[] = ['content', 'entities'] as const;
+
+/** Escape backslash, percent, underscore for SQL LIKE with ESCAPE '\\'. */
+function escapeLike(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
 
 /**
  * Maximum input length accepted by `buildFtsQuery`. Anything longer is
@@ -175,14 +184,20 @@ function rowToEntity(row: Row): Entity {
 
 
 function rowToFact(row: Row): Fact {
+  const entitiesJson = row.entities_json as string | null;
+  const entities: string[] = entitiesJson ? p<string[]>(entitiesJson) : [];
   return {
     id: row.id as string,
     fact: row.fact as string,
-    entity: row.entity as string,
+    entities,
     attribute: (row.attribute as string | null) ?? undefined,
     value: (row.value as string | null) ?? undefined,
     confidence: row.confidence as number,
     sourceType: row.source_type as Fact['sourceType'],
+    sourceMemoryId: (row.source_memory_id as string | null) ?? undefined,
+    sourcePath: (row.source_path as string | null) ?? undefined,
+    sourceConversationId: (row.source_conversation_id as string | null) ?? undefined,
+    category: (row.category as Fact['category']) ?? 'general',
     createdAt: row.created_at as string,
     lastReinforcedAt: (row.last_reinforced_at as string | null) ?? undefined,
     expiresAt: (row.expires_at as string | null) ?? undefined,
@@ -464,23 +479,34 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
 
     storeFact: async (fact: Fact) => {
       assertConnected(db);
+      // INSERT OR REPLACE is supposed to fire AFTER DELETE + AFTER INSERT
+      // triggers, but libsql's FTS5 virtual table doesn't always clear the
+      // old shadow rows in that path. Pre-delete the FTS row explicitly so
+      // the AFTER INSERT trigger always produces a clean state.
+      db.prepare('DELETE FROM facts_fts WHERE fact_id = ?').run(fact.id);
       db.prepare(`
         INSERT OR REPLACE INTO facts
-          (id, fact, entity, attribute, value, confidence, source_type,
+          (id, fact, entities_json, attribute, value, confidence, source_type,
+           source_memory_id, source_path, source_conversation_id, category,
            created_at, last_reinforced_at, expires_at, is_latest, superseded_by,
            surprisal_score, scopes)
         VALUES
-          (@id, @fact, @entity, @attribute, @value, @confidence, @source_type,
+          (@id, @fact, @entities_json, @attribute, @value, @confidence, @source_type,
+           @source_memory_id, @source_path, @source_conversation_id, @category,
            @created_at, @last_reinforced_at, @expires_at, @is_latest, @superseded_by,
            @surprisal_score, @scopes)
       `).run({
         id: fact.id,
         fact: fact.fact,
-        entity: fact.entity,
+        entities_json: j(fact.entities),
         attribute: fact.attribute ?? null,
         value: fact.value ?? null,
         confidence: fact.confidence,
         source_type: fact.sourceType,
+        source_memory_id: fact.sourceMemoryId ?? null,
+        source_path: fact.sourcePath ?? null,
+        source_conversation_id: fact.sourceConversationId ?? null,
+        category: fact.category,
         created_at: fact.createdAt,
         last_reinforced_at: fact.lastReinforcedAt ?? null,
         expires_at: fact.expiresAt ?? null,
@@ -491,14 +517,25 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
       });
     },
 
+    getFact: async (id: string) => {
+      assertConnected(db);
+      const row = db.prepare('SELECT * FROM facts WHERE id=?').get(id) as Row | undefined;
+      return row ? rowToFact(row) : null;
+    },
+
     getFactsForEntity: async (
       entity: string,
       attribute?: string,
       asOf?: string,
     ) => {
       assertConnected(db);
-      let sql = 'SELECT * FROM facts WHERE entity=?';
-      const params: unknown[] = [entity];
+      // v1.0.0: facts denormalise entities into entities_json. Match
+      // case-insensitively against the JSON list, then re-validate against
+      // the parsed array to drop substring false positives (e.g. "Bob"
+      // matching "Bobby"). Mirrors KB fact-store.ts:448-475.
+      const needle = entity.toLowerCase();
+      let sql = "SELECT * FROM facts WHERE LOWER(entities_json) LIKE ? ESCAPE '\\'";
+      const params: unknown[] = [`%${escapeLike(needle)}%`];
       if (attribute !== undefined) {
         sql += ' AND attribute=?';
         params.push(attribute);
@@ -508,7 +545,9 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
         params.push(asOf);
       }
       const rows = db.prepare(sql).all(...params) as Row[];
-      return rows.map(rowToFact);
+      return rows
+        .map(rowToFact)
+        .filter((f) => f.entities.some((e) => e.toLowerCase() === needle));
     },
 
     markFactSuperseded: async (oldFactId: string, newFactId: string) => {
@@ -577,6 +616,69 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
         score: normalizeRank(row.rank as number),
         matchedFields: detectMatchedFields(row, tokens, selectedFields),
       }));
+    },
+
+    // v1.0.0 — direct fact-level FTS via the facts_fts virtual table.
+    searchFactsFulltext: async (
+      query: string,
+      opts?: FactsFulltextSearchOpts,
+    ): Promise<FactsFulltextMatch[]> => {
+      assertConnected(db);
+      const built = buildFtsQuery(query);
+      if (!built) return [];
+      const { ftsQuery, tokens } = built;
+      const topK = opts?.topK ?? 50;
+      const selectedFields = (opts?.fields ?? FACTS_FTS_FIELDS) as readonly FactsFulltextField[];
+      const latestOnly = opts?.latestOnly ?? true;
+
+      const where: string[] = ['facts_fts MATCH ?'];
+      const params: unknown[] = [ftsQuery];
+      if (latestOnly) {
+        where.push('fa.is_latest = 1');
+      }
+      if (opts?.category) {
+        where.push('fa.category = ?');
+        params.push(opts.category);
+      }
+      const sql = `
+        SELECT ft.fact_id  AS fact_id,
+               ft.content  AS content,
+               ft.entities AS entities,
+               ft.rank     AS rank,
+               fa.scopes   AS scopes
+        FROM facts_fts ft
+        JOIN facts fa ON fa.id = ft.fact_id
+        WHERE ${where.join(' AND ')}
+        ORDER BY ft.rank
+        LIMIT ?
+      `;
+      params.push(topK);
+      const rows = db.prepare(sql).all(...params) as Row[];
+
+      let filteredRows = rows;
+      if (opts?.scopes) {
+        const wanted = opts.scopes;
+        filteredRows = rows.filter((row) => {
+          if (!row.scopes) return false;
+          const fs = p<Record<string, unknown>>(row.scopes as string) ?? {};
+          if (wanted.org_id !== undefined && fs.org_id !== wanted.org_id) return false;
+          if (wanted.project_id !== undefined && fs.project_id !== wanted.project_id) return false;
+          return true;
+        });
+      }
+
+      return filteredRows.map<FactsFulltextMatch>((row) => {
+        const matched: FactsFulltextField[] = [];
+        for (const field of selectedFields) {
+          const haystack = String(row[field] ?? '').toLowerCase();
+          if (tokens.some((t) => haystack.includes(t))) matched.push(field);
+        }
+        return {
+          factId: row.fact_id as string,
+          score: normalizeRank(row.rank as number),
+          matchedFields: matched,
+        };
+      });
     },
 
     // ── Contradiction ─────────────────────────────────────────────────────

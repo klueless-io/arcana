@@ -38,8 +38,8 @@ describe('getEntityProfile', () => {
     await structured.storeFact({
       id: 'fact_1',
       fact: 'Alice works at Anthropic',
-      entity: 'ent_1',
-      confidence: 0.9,
+      entities: ['ent_1'],
+      category: 'general',      confidence: 0.9,
       sourceType: 'chat',
       createdAt: new Date().toISOString(),
       isLatest: true,
@@ -47,8 +47,8 @@ describe('getEntityProfile', () => {
     await structured.storeFact({
       id: 'fact_2',
       fact: 'Alice lives in San Francisco',
-      entity: 'ent_1',
-      confidence: 0.8,
+      entities: ['ent_1'],
+      category: 'general',      confidence: 0.8,
       sourceType: 'chat',
       createdAt: new Date().toISOString(),
       isLatest: true,
@@ -66,8 +66,8 @@ describe('getEntityProfile', () => {
     await structured.storeFact({
       id: 'fact_3',
       fact: 'Bob is a developer',
-      entity: 'ent_2',
-      confidence: 0.95,
+      entities: ['ent_2'],
+      category: 'general',      confidence: 0.95,
       sourceType: 'terminal',
       createdAt: new Date().toISOString(),
       isLatest: true,
@@ -93,8 +93,8 @@ describe('getEntityProfile', () => {
     await structured.storeFact({
       id: 'fact_4',
       fact: 'Carol leads engineering',
-      entity: 'ent_3',
-      confidence: 0.85,
+      entities: ['ent_3'],
+      category: 'general',      confidence: 0.85,
       sourceType: 'ai-extraction',
       createdAt: new Date().toISOString(),
       isLatest: true,
@@ -119,7 +119,7 @@ describe('factRetrieval', () => {
   it('returns empty array when store is empty', async () => {
     const api = createRetrieve(deps);
     const result = await api.factRetrieval({ query: 'anything' });
-    expect(result.data).toEqual([]);
+    expect(result.data.supportingMemories).toEqual([]);
   });
 
   it('matches memories by query words', async () => {
@@ -144,9 +144,9 @@ describe('factRetrieval', () => {
     const api = createRetrieve(deps);
     const result = await api.factRetrieval({ query: 'Anthropic founded' });
 
-    expect(result.data.length).toBeGreaterThan(0);
-    expect(result.data[0]!.score).toBeGreaterThan(0);
-    expect(result.data[0]!.memory.id).toBe('mem_1');
+    expect(result.data.supportingMemories.length).toBeGreaterThan(0);
+    expect(result.data.supportingMemories[0]!.score).toBeGreaterThan(0);
+    expect(result.data.supportingMemories[0]!.memory.id).toBe('mem_1');
   });
 
   it('scores higher for more word matches', async () => {
@@ -189,10 +189,10 @@ describe('factRetrieval', () => {
     // Query words with length > 2: "dario", "anthropic", "founded"
     const result = await api.factRetrieval({ query: 'dario anthropic founded' });
 
-    expect(result.data.length).toBeGreaterThanOrEqual(2);
+    expect(result.data.supportingMemories.length).toBeGreaterThanOrEqual(2);
     // mem_high matches all 3 words, mem_low matches only 1 — mem_high should come first
-    expect(result.data[0]!.memory.id).toBe('mem_high');
-    expect(result.data[0]!.score).toBeGreaterThan(result.data[1]!.score);
+    expect(result.data.supportingMemories[0]!.memory.id).toBe('mem_high');
+    expect(result.data.supportingMemories[0]!.score).toBeGreaterThan(result.data.supportingMemories[1]!.score);
   });
 
   it('result includes layer-tagged why field per ADR 011 KB-faithful port', async () => {
@@ -217,9 +217,9 @@ describe('factRetrieval', () => {
     const api = createRetrieve(deps);
     const result = await api.factRetrieval({ query: 'testing document' });
 
-    expect(result.data.length).toBeGreaterThan(0);
+    expect(result.data.supportingMemories.length).toBeGreaterThan(0);
     // KB-faithful: why is layer-tagged. Layer 1 direct match → 'fact-retrieval/direct'
-    expect(result.data[0]!.why).toBe('fact-retrieval/direct');
+    expect(result.data.supportingMemories[0]!.why).toBe('fact-retrieval/direct');
   });
 
   it('wraps result in QueryResult envelope', async () => {
@@ -255,7 +255,7 @@ describe('factRetrieval', () => {
 
     const api = createRetrieve(deps);
     const result = await api.factRetrieval({ query: 'kybernesis' });
-    const linked = result.data.find((r) => r.memory.id === 'mem_linked');
+    const linked = result.data.supportingMemories.find((r) => r.memory.id === 'mem_linked');
     expect(linked).toBeDefined();
     expect(linked?.why).toBe('fact-retrieval/entity_expansion');
   });
@@ -290,7 +290,7 @@ describe('factRetrieval', () => {
 
     const api = createRetrieve(deps);
     const result = await api.factRetrieval({ query: 'sentinel' });
-    const hopped = result.data.find((r) => r.memory.id === 'mem_hop1');
+    const hopped = result.data.supportingMemories.find((r) => r.memory.id === 'mem_hop1');
     expect(hopped).toBeDefined();
     expect(hopped?.why).toBe('fact-retrieval/graph_expansion');
   });
@@ -319,9 +319,108 @@ describe('factRetrieval', () => {
 
     const api = createRetrieve(deps);
     const result = await api.factRetrieval({ query: 'alpha beta' });
-    const bridged = result.data.find((r) => r.memory.id === 'mem_bridge');
+    const bridged = result.data.supportingMemories.find((r) => r.memory.id === 'mem_bridge');
     expect(bridged).toBeDefined();
     expect(bridged?.why).toBe('fact-retrieval/bridge');
+  });
+
+  it('layer 0 — direct fact-FTS surfaces facts in the rich bundle (v1.0.0)', async () => {
+    await structured.storeFact({
+      id: 'f_layer0',
+      fact: 'Acme acquired Widgets Inc. in 2025',
+      entities: ['Acme', 'Widgets Inc.'],
+      category: 'event',
+      confidence: 0.9,
+      sourceType: 'ai-extraction',
+      createdAt: '2026-05-22T00:00:00.000Z',
+      isLatest: true,
+    });
+    const api = createRetrieve(deps);
+    const result = await api.factRetrieval({ query: 'Acme' });
+    expect(result.data.facts.length).toBeGreaterThan(0);
+    const hit = result.data.facts.find((f) => f.fact.id === 'f_layer0');
+    expect(hit).toBeDefined();
+    expect(hit!.source).toBe('direct_facts');
+    expect(hit!.score).toBeGreaterThan(0.5);
+  });
+
+  it('returns rich-bundle shape — facts, supportingMemories, assembledContext, tokenEstimate, stats', async () => {
+    await structured.storeFact({
+      id: 'f_rich',
+      fact: 'The new headquarters opened in Sydney last quarter',
+      entities: ['Sydney'],
+      category: 'event',
+      confidence: 0.8,
+      sourceType: 'ai-extraction',
+      createdAt: '2026-05-22T00:00:00.000Z',
+      isLatest: true,
+    });
+    const api = createRetrieve(deps);
+    const result = await api.factRetrieval({ query: 'Sydney' });
+    expect(Array.isArray(result.data.facts)).toBe(true);
+    expect(Array.isArray(result.data.supportingMemories)).toBe(true);
+    expect(typeof result.data.assembledContext).toBe('string');
+    expect(typeof result.data.tokenEstimate).toBe('number');
+    expect(result.data.stats).toHaveProperty('perLayerCounts');
+    expect(result.data.stats).toHaveProperty('totalCandidates');
+    expect(result.data.stats).toHaveProperty('deduplicatedCount');
+    // tokenEstimate = ceil(assembledContext.length / 4) — KB convention
+    expect(result.data.tokenEstimate).toBe(
+      Math.ceil(result.data.assembledContext.length / 4),
+    );
+  });
+
+  it('layer 0 fact category filter narrows results', async () => {
+    await structured.storeFact({
+      id: 'f_bio',
+      fact: 'Alice was born in March 1990 in Melbourne',
+      entities: ['Alice'],
+      category: 'biographical',
+      confidence: 0.9,
+      sourceType: 'ai-extraction',
+      createdAt: '2026-05-22T00:00:00.000Z',
+      isLatest: true,
+    });
+    await structured.storeFact({
+      id: 'f_evt',
+      fact: 'Alice attended Melbourne meetup in May 2026',
+      entities: ['Alice'],
+      category: 'event',
+      confidence: 0.85,
+      sourceType: 'ai-extraction',
+      createdAt: '2026-05-22T00:00:00.000Z',
+      isLatest: true,
+    });
+    const api = createRetrieve(deps);
+    const bio = await api.factRetrieval({ query: 'Melbourne', category: 'biographical' });
+    const ids = bio.data.facts.map((f) => f.fact.id);
+    expect(ids).toContain('f_bio');
+    expect(ids).not.toContain('f_evt');
+  });
+
+  it('layer 0 → memory fan-out: facts with sourceMemoryId surface that memory', async () => {
+    await structured.storeMemory({
+      id: 'mem_for_fact', title: 'src', summary: '', content: 'background',
+      tags: [], priority: 0.5, tier: 'warm', decayScore: 0, accessCount: 0,
+      isPinned: false, contentHash: 'h', createdAt: '2026-05-22T00:00:00.000Z',
+      source: 'cli', status: 'active', isLatest: true,
+    });
+    await structured.storeFact({
+      id: 'f_with_src',
+      fact: 'Zorblaxia is a fictional moon studied by Researchers',
+      entities: ['Zorblaxia', 'Researchers'],
+      category: 'event',
+      confidence: 0.85,
+      sourceType: 'ai-extraction',
+      sourceMemoryId: 'mem_for_fact',
+      createdAt: '2026-05-22T00:00:00.000Z',
+      isLatest: true,
+    });
+    const api = createRetrieve(deps);
+    const result = await api.factRetrieval({ query: 'Zorblaxia' });
+    const linked = result.data.supportingMemories.find((m) => m.memory.id === 'mem_for_fact');
+    expect(linked).toBeDefined();
+    expect(linked?.why).toBe('fact-retrieval/direct_facts');
   });
 
   it('parity-harness smoke test — factRetrieval can be wired into runParityHarness', async () => {
@@ -338,7 +437,7 @@ describe('factRetrieval', () => {
       queries: [{ id: 'q1', input: { query: 'kybernesis' } }],
       baseline: queryFn,
       candidate: queryFn,
-      extractIds: (r) => r.data.map((row) => row.memory.id),
+      extractIds: (r) => r.data.supportingMemories.map((row) => row.memory.id),
     });
     expect(report.passes).toBe(true);
     expect(report.meanOverlap).toBe(1);

@@ -143,8 +143,8 @@ describe('command.recordFact', () => {
   it('persists a sentence-only fact (no triple decomposition)', async () => {
     const id = await api.recordFact({
       fact: 'David likes coffee',
-      entity: 'David',
-      confidence: 0.8,
+      entities: ['David'],
+      category: 'general',      confidence: 0.8,
       sourceType: 'chat',
     });
     expect(id).toMatch(/^[0-9a-f-]{36}$/);
@@ -159,8 +159,8 @@ describe('command.recordFact', () => {
   it('persists a fully-decomposed fact (with attribute + value)', async () => {
     const id = await api.recordFact({
       fact: 'David is a senior engineer',
-      entity: 'David',
-      attribute: 'role',
+      entities: ['David'],
+      category: 'general',      attribute: 'role',
       value: 'senior engineer',
       confidence: 0.95,
       sourceType: 'ai-extraction',
@@ -175,8 +175,8 @@ describe('command.recordFact', () => {
   it('passes through optional scopes', async () => {
     const id = await api.recordFact({
       fact: 'Acme is in San Francisco',
-      entity: 'Acme',
-      confidence: 0.9,
+      entities: ['Acme'],
+      category: 'general',      confidence: 0.9,
       sourceType: 'connector',
       scopes: { project_id: 'proj_1' },
     });
@@ -189,8 +189,8 @@ describe('command.recordFact', () => {
     await expect(
       api.recordFact({
         fact: 'x',
-        entity: 'David',
-        confidence: 1.5,
+        entities: ['David'],
+        category: 'general',        confidence: 1.5,
         sourceType: 'chat',
       }),
     ).rejects.toThrow();
@@ -200,8 +200,8 @@ describe('command.recordFact', () => {
     await expect(
       api.recordFact({
         fact: '',
-        entity: 'David',
-        confidence: 0.5,
+        entities: ['David'],
+        category: 'general',        confidence: 0.5,
         sourceType: 'chat',
       }),
     ).rejects.toThrow();
@@ -364,14 +364,14 @@ describe('command.markFactSuperseded', () => {
   it('marks an existing fact as superseded by another', async () => {
     const oldId = await api.recordFact({
       fact: 'David lives in Sydney',
-      entity: 'David',
-      confidence: 0.9,
+      entities: ['David'],
+      category: 'general',      confidence: 0.9,
       sourceType: 'chat',
     });
     const newId = await api.recordFact({
       fact: 'David lives in Melbourne',
-      entity: 'David',
-      confidence: 0.95,
+      entities: ['David'],
+      category: 'general',      confidence: 0.95,
       sourceType: 'chat',
     });
     await api.markFactSuperseded(oldId, newId);

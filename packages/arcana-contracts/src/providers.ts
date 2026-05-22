@@ -19,7 +19,7 @@
 import type { Memory, Chunk, Tier } from './memory.js';
 import type { Entity } from './entity.js';
 import type { Edge, NodeRef } from './edge.js';
-import type { Fact, Contradiction } from './fact.js';
+import type { Fact, Contradiction, FactCategory } from './fact.js';
 import type { Insight, EntityProfile } from './insight.js';
 import type { AgentSelf } from './agent-self.js';
 import type { Scopes } from './scopes.js';
@@ -80,6 +80,12 @@ export interface StructuredStore {
   // Fact
   storeFact(fact: Fact): Promise<void>;
   /**
+   * Retrieve a single fact by id, or null if it doesn't exist. v1.0.0 —
+   * needed by factRetrieval's Layer 0 to resolve fact-FTS hits into the
+   * rich ScoredFact bundle.
+   */
+  getFact(id: string): Promise<Fact | null>;
+  /**
    * Look up facts for an entity. Optionally narrow by attribute.
    *
    * When `asOf` (ISO 8601) is supplied, only facts that were valid at
@@ -113,6 +119,22 @@ export interface StructuredStore {
    * fields when omitted.
    */
   searchFulltext(query: string, opts?: FulltextSearchOpts): Promise<FulltextMatch[]>;
+
+  /**
+   * v1.0.0 — direct full-text search over facts (not memories). Returns
+   * scored fact-id matches with the indexed fields that hit. libsql uses
+   * a `facts_fts` FTS5 virtual table over `content` and `entities`.
+   *
+   * Score is normalised to 0..1 (higher = more relevant) using the same
+   * rank-based convention as `searchFulltext`.
+   *
+   * Per ADR 013 — this method unblocks fact-level retrieval (Layer 0 of
+   * `factRetrieval`) and parity-via-swap with KyberBot's `fact-store.ts`.
+   */
+  searchFactsFulltext(
+    query: string,
+    opts?: FactsFulltextSearchOpts,
+  ): Promise<FactsFulltextMatch[]>;
 
   // Contradiction
   storeContradiction(contradiction: Contradiction): Promise<void>;
@@ -160,6 +182,26 @@ export interface FulltextMatch {
   /** Normalized 0..1 — higher is more relevant. */
   score: number;
   matchedFields: FulltextField[];
+}
+
+/** Indexed fields available for fact-level fulltext search. */
+export type FactsFulltextField = 'content' | 'entities';
+
+export interface FactsFulltextSearchOpts {
+  scopes?: Scopes;
+  topK?: number;
+  fields?: FactsFulltextField[];
+  /** Filter to a single category — e.g., 'biographical'. */
+  category?: FactCategory;
+  /** When true (default), only return facts where isLatest = true. */
+  latestOnly?: boolean;
+}
+
+export interface FactsFulltextMatch {
+  factId: string;
+  /** Normalized 0..1 — higher is more relevant. */
+  score: number;
+  matchedFields: FactsFulltextField[];
 }
 
 /**

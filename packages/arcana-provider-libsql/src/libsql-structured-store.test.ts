@@ -33,8 +33,8 @@ const baseEntity = (): Entity => ({
 const baseFact = (): Fact => ({
   id: 'fact_1',
   fact: 'Anthropic was founded in 2021',
-  entity: 'ent_1',
-  confidence: 0.9,
+  entities: ['ent_1'],
+  category: 'general',  confidence: 0.9,
   sourceType: 'ai-extraction',
   createdAt: '2026-05-19T00:00:00.000Z',
   isLatest: true,
@@ -401,5 +401,96 @@ describe('LibsqlStructuredStore (in-memory SQLite)', () => {
     // No asOf preserves legacy behavior — returns everything
     const all = (await store.getFactsForEntity('ent_1')).map((f) => f.id).sort();
     expect(all).toEqual(['f_active', 'f_expired', 'f_perpetual']);
+  });
+});
+
+describe('LibsqlStructuredStore — searchFactsFulltext (v1.0.0)', () => {
+  const store = createLibsqlStructuredStore(':memory:');
+  beforeEach(async () => { await store.connect(); });
+  afterEach(async () => { await store.disconnect(); });
+
+  const fact = (overrides: Partial<Fact> = {}): Fact => ({
+    id: `f_${Math.random().toString(36).slice(2, 9)}`,
+    fact: 'Alice met Bob in Paris during summer',
+    entities: ['Alice', 'Bob', 'Paris'],
+    category: 'event',
+    confidence: 0.9,
+    sourceType: 'ai-extraction',
+    createdAt: '2026-05-22T00:00:00.000Z',
+    isLatest: true,
+    ...overrides,
+  });
+
+  it('returns FTS5 matches against fact content', async () => {
+    const f = fact();
+    await store.storeFact(f);
+    const matches = await store.searchFactsFulltext('Paris');
+    expect(matches).toHaveLength(1);
+    expect(matches[0].factId).toBe(f.id);
+    expect(matches[0].score).toBeGreaterThan(0);
+    expect(matches[0].matchedFields).toContain('content');
+  });
+
+  it('returns FTS5 matches against entities_json', async () => {
+    const f = fact({ entities: ['Charlie', 'London'] });
+    await store.storeFact(f);
+    const matches = await store.searchFactsFulltext('Charlie');
+    expect(matches).toHaveLength(1);
+    expect(matches[0].factId).toBe(f.id);
+    expect(matches[0].matchedFields).toContain('entities');
+  });
+
+  it('filters by category', async () => {
+    await store.storeFact(fact({ id: 'fb', fact: 'X bio', entities: ['X'], category: 'biographical' }));
+    await store.storeFact(fact({ id: 'fe', fact: 'X event', entities: ['X'], category: 'event' }));
+    const bio = await store.searchFactsFulltext('X', { category: 'biographical' });
+    expect(bio).toHaveLength(1);
+    expect(bio[0].factId).toBe('fb');
+  });
+
+  it('respects latestOnly=true by default', async () => {
+    await store.storeFact(fact({ id: 'f_old', isLatest: false }));
+    await store.storeFact(fact({ id: 'f_new', isLatest: true }));
+    const latest = await store.searchFactsFulltext('Paris');
+    expect(latest.map((m) => m.factId).sort()).toEqual(['f_new']);
+  });
+
+  it('returns superseded facts when latestOnly=false', async () => {
+    await store.storeFact(fact({ id: 'f_old', isLatest: false }));
+    await store.storeFact(fact({ id: 'f_new', isLatest: true }));
+    const all = await store.searchFactsFulltext('Paris', { latestOnly: false });
+    expect(all.map((m) => m.factId).sort()).toEqual(['f_new', 'f_old']);
+  });
+
+  it('returns empty array on empty query token set', async () => {
+    await store.storeFact(fact());
+    expect(await store.searchFactsFulltext('   ')).toEqual([]);
+  });
+
+  it('UPDATE trigger keeps facts_fts in sync', async () => {
+    const f = fact({ id: 'f_u', fact: 'Original content' });
+    await store.storeFact(f);
+    const beforeUpdate = await store.searchFactsFulltext('Original');
+    expect(beforeUpdate).toHaveLength(1);
+
+    await store.storeFact({ ...f, fact: 'Revised totally different text' });
+    const afterUpdate = await store.searchFactsFulltext('Original');
+    expect(afterUpdate).toHaveLength(0);
+    const afterUpdate2 = await store.searchFactsFulltext('Revised');
+    expect(afterUpdate2).toHaveLength(1);
+  });
+
+  it('UPDATE trigger flushes both content and entities columns', async () => {
+    // Verifies the AFTER UPDATE trigger's delete-then-insert path also
+    // refreshes the entities FTS column (not just content). The default
+    // fact() includes 'Paris' in both fact text and entities[], so we
+    // overwrite both to confirm the FTS mirror is fully replaced.
+    const f = fact({ id: 'f_d' });
+    await store.storeFact(f);
+    await store.storeFact({ ...f, fact: 'Replaced text', entities: ['Zoe'] });
+    const paris = await store.searchFactsFulltext('Paris');
+    expect(paris.filter((m) => m.factId === 'f_d')).toHaveLength(0);
+    const zoe = await store.searchFactsFulltext('Zoe');
+    expect(zoe.filter((m) => m.factId === 'f_d')).toHaveLength(1);
   });
 });

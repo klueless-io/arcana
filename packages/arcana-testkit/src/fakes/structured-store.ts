@@ -144,15 +144,63 @@ export function createFakeStructuredStore(): StructuredStore {
     storeFact: async (fact: Fact) => {
       facts.set(fact.id, fact);
     },
+    getFact: async (id: string) => facts.get(id) ?? null,
     getFactsForEntity: async (entity: string, attribute?: string, asOf?: string) => {
+      // v1.0.0: entity match is against the denormalised entities[] list,
+      // case-insensitive.
+      const needle = entity.toLowerCase();
       return [...facts.values()].filter((f) => {
-        if (f.entity !== entity) return false;
+        if (!f.entities.some((e) => e.toLowerCase() === needle)) return false;
         if (attribute !== undefined && f.attribute !== attribute) return false;
         if (asOf !== undefined && f.expiresAt !== undefined && f.expiresAt <= asOf) {
           return false;
         }
         return true;
       });
+    },
+
+    searchFactsFulltext: async (query, opts) => {
+      const tokens = query.toLowerCase().split(/\s+/).filter((w) => w.length > 0);
+      if (tokens.length === 0) return [];
+      const selectedFields = opts?.fields ?? (['content', 'entities'] as const);
+      const latestOnly = opts?.latestOnly ?? true;
+      const matches: Array<{
+        factId: string;
+        score: number;
+        matchedFields: ('content' | 'entities')[];
+      }> = [];
+      for (const f of facts.values()) {
+        if (latestOnly && !f.isLatest) continue;
+        if (opts?.category && f.category !== opts.category) continue;
+        if (opts?.scopes) {
+          const fs = f.scopes ?? {};
+          if (opts.scopes.org_id !== undefined && fs.org_id !== opts.scopes.org_id) continue;
+          if (opts.scopes.project_id !== undefined && fs.project_id !== opts.scopes.project_id) continue;
+        }
+        const fieldText: Record<'content' | 'entities', string> = {
+          content: f.fact.toLowerCase(),
+          entities: f.entities.join(' ').toLowerCase(),
+        };
+        const matchedFields: ('content' | 'entities')[] = [];
+        let hits = 0;
+        for (const field of selectedFields) {
+          const haystack = fieldText[field];
+          const fieldHits = tokens.filter((t) => haystack.includes(t)).length;
+          if (fieldHits > 0) {
+            matchedFields.push(field);
+            hits += fieldHits;
+          }
+        }
+        if (hits === 0) continue;
+        matches.push({
+          factId: f.id,
+          score: Math.min(1, hits / (tokens.length * selectedFields.length)),
+          matchedFields,
+        });
+      }
+      matches.sort((a, b) => b.score - a.score);
+      const topK = opts?.topK ?? 50;
+      return matches.slice(0, topK);
     },
 
     searchFulltext: async (query: string, opts?: FulltextSearchOpts): Promise<FulltextMatch[]> => {

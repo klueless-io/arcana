@@ -1,5 +1,7 @@
 import type {
   Memory,
+  Fact,
+  FactCategory,
   EntityProfile,
   Scopes,
   Tier,
@@ -61,6 +63,35 @@ export interface FactRetrievalInput {
   depth?: number;
   scopes?: Scopes;
   tokenBudget?: number;
+  /** v1.0.0 — filter Layer 0 fact-FTS to a single category. */
+  category?: FactCategory;
+}
+
+/**
+ * v1.0.0 — fact bundle from KB `fact-retrieval.ts:31-59` (`FactSearchResult`).
+ * Per ADR 013.
+ */
+export interface ScoredFact {
+  fact: Fact;
+  score: number;
+  /** Which retrieval layer surfaced this fact. */
+  source: 'direct_facts' | 'entity_expansion' | 'graph_expansion' | 'bridge';
+}
+
+export interface FactRetrievalResult {
+  /** Direct fact hits — Layer 0 (fact-FTS) + entity-derived facts. */
+  facts: ScoredFact[];
+  /** Memory-shaped results from the 4 memory layers. */
+  supportingMemories: HybridSearchResult[];
+  /** Token-budgeted concatenation of facts + supporting memories, prompt-ready. */
+  assembledContext: string;
+  /** Rough token count — `Math.ceil(assembledContext.length / 4)` (KB convention). */
+  tokenEstimate: number;
+  stats: {
+    perLayerCounts: Record<string, number>;
+    totalCandidates: number;
+    deduplicatedCount: number;
+  };
 }
 
 export interface RetrieveDeps {
@@ -74,8 +105,13 @@ export interface RetrieveDeps {
 export interface RetrieveApi {
   /** Hybrid retrieval: semantic + keyword + graph-expansion, fused via RRF. */
   hybridSearch(input: HybridSearchInput): Promise<QueryResult<HybridSearchResult[]>>;
-  /** Multi-stage fact-aware retrieval: FTS → entity → graph → bridge. */
-  factRetrieval(input: FactRetrievalInput): Promise<QueryResult<HybridSearchResult[]>>;
+  /**
+   * Multi-stage fact-aware retrieval. v1.0.0: 5-layer flow per ADR 013 —
+   * Layer 0 direct fact-FTS, then memory layers 1-4 (direct memory FTS,
+   * entity-name expansion, 1-hop graph, bridge). Returns a rich
+   * `FactRetrievalResult` bundle ported from KyberBot's empirical shape.
+   */
+  factRetrieval(input: FactRetrievalInput): Promise<QueryResult<FactRetrievalResult>>;
   /** Compiled dossier for an entity. */
   getEntityProfile(entityId: string): Promise<QueryResult<EntityProfile | null>>;
 }
@@ -346,26 +382,23 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
 
     async factRetrieval(
       input: FactRetrievalInput,
-    ): Promise<QueryResult<HybridSearchResult[]>> {
+    ): Promise<QueryResult<FactRetrievalResult>> {
       // ────────────────────────────────────────────────────────────────────────
-      // KyberBot-faithful 4-layer port per ADR 011 (v0.4.1 rebase).
-      // Source: kyberbot/packages/cli/src/brain/fact-retrieval.ts
+      // v1.0.0 — 5-layer KyberBot-faithful port per ADR 011 + ADR 013.
+      // Source: kyberbot/packages/cli/src/brain/fact-retrieval.ts (994 LOC)
       //
-      // KB algorithm structure: Layer 1 direct FTS → Layer 2 entity-name
-      // expansion (1-hop) → Layer 3 graph expansion (further entity hops)
-      // → Layer 4 bridge (memories connecting multiple matched entities).
+      // Layer 0 — direct fact-FTS via searchFactsFulltext (NEW in v1.0.0).
+      // Layer 1 — direct memory FTS.
+      // Layer 2 — entity-name expansion (also surfaces entity-attached facts).
+      // Layer 3 — 1-hop graph expansion.
+      // Layer 4 — bridge (memories connecting ≥ 2 seed entities).
       //
-      // Schema-translation choices (documented in
-      // docs/plans/2026-05-21-fact-retrieval-rebase.md Findings appendix):
-      //   - KB has a richer `facts` table (category, source_path, entities_json,
-      //     fact-level FTS5). Arcana's Fact schema is lighter and facts don't
-      //     directly link to memories. So we operate the *algorithm* against
-      //     Arcana's memory + entity + edge tables, with facts contributing
-      //     as a ranking signal via getFactsForEntity.
-      //   - KB returns a richer bundle (facts + supporting_context +
-      //     assembled_context). Arcana's contract returns memory-shaped
-      //     HybridSearchResult[]; the layer algorithm produces memory ranks,
-      //     not fact-shaped output. Rich-bundle return is v2 work.
+      // Memory source-layer priority: bridge > direct > entity_expansion > graph_expansion.
+      // Fact source-layer priority: bridge > direct_facts > entity_expansion > graph_expansion.
+      //
+      // Returns the rich bundle from KB fact-retrieval.ts:31-59 (FactSearchResult):
+      // facts (Layer 0 + entity-derived), supportingMemories (Layers 1-4),
+      // assembledContext (prompt-ready), tokenEstimate (length/4), stats.
       // ────────────────────────────────────────────────────────────────────────
 
       // Hop-distance penalties (KB hybrid-search.ts:333-338)
@@ -380,32 +413,82 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
 
       const topK = input.tokenBudget ? Math.floor(input.tokenBudget / 200) : 10;
 
-      // Per-memory accumulator: max score across layers; source label tracks
-      // the highest-priority layer that fired for this memory (regardless of
-      // relative score), because bridge > direct > entity_expansion >
-      // graph_expansion as a semantic-strength ordering.
-      type Source = 'direct' | 'entity_expansion' | 'graph_expansion' | 'bridge';
-      type Scored = { memoryId: string; score: number; source: Source };
-      const scored = new Map<string, Scored>();
+      // Per-memory accumulator: max score; source label tracks highest-priority
+      // layer regardless of relative score.
+      type MemorySource = 'direct' | 'entity_expansion' | 'graph_expansion' | 'bridge';
+      type ScoredMemory = { memoryId: string; score: number; source: MemorySource };
+      const scored = new Map<string, ScoredMemory>();
 
-      const LAYER_PRIORITY: Record<Source, number> = {
+      const MEMORY_PRIORITY: Record<MemorySource, number> = {
         bridge: 4,
         direct: 3,
         entity_expansion: 2,
         graph_expansion: 1,
       };
 
-      const bump = (memoryId: string, score: number, source: Source): void => {
+      const bump = (memoryId: string, score: number, source: MemorySource): void => {
         const existing = scored.get(memoryId);
         if (!existing) {
           scored.set(memoryId, { memoryId, score, source });
           return;
         }
         if (score > existing.score) existing.score = score;
-        if (LAYER_PRIORITY[source] > LAYER_PRIORITY[existing.source]) {
+        if (MEMORY_PRIORITY[source] > MEMORY_PRIORITY[existing.source]) {
           existing.source = source;
         }
       };
+
+      // Per-fact accumulator (parallel to memory accumulator).
+      type FactLayer = 'direct_facts' | 'entity_expansion' | 'graph_expansion' | 'bridge';
+      type ScoredFactRef = { factId: string; score: number; source: FactLayer };
+      const factHits = new Map<string, ScoredFactRef>();
+      const FACT_PRIORITY: Record<FactLayer, number> = {
+        bridge: 4,
+        direct_facts: 3,
+        entity_expansion: 2,
+        graph_expansion: 1,
+      };
+      const bumpFact = (factId: string, score: number, source: FactLayer): void => {
+        const existing = factHits.get(factId);
+        if (!existing) {
+          factHits.set(factId, { factId, score, source });
+          return;
+        }
+        if (score > existing.score) existing.score = score;
+        if (FACT_PRIORITY[source] > FACT_PRIORITY[existing.source]) {
+          existing.source = source;
+        }
+      };
+
+      const perLayerCounts: Record<string, number> = {
+        fact_direct_facts: 0,
+        memory_direct: 0,
+        entity_expansion: 0,
+        graph_expansion: 0,
+        bridge: 0,
+      };
+
+      // ── Layer 0: direct fact-FTS (v1.0.0 — KB fact-retrieval.ts:113-280) ──
+      // Direct hits on the facts_fts index. Scored 0.5 + matchRatio*0.5
+      // (KB scoring convention). Bridges memories via Fact.sourceMemoryId
+      // when set.
+      if (tokens.length > 0) {
+        try {
+          const factMatches = await deps.structured.searchFactsFulltext(input.query, {
+            scopes: input.scopes,
+            topK: topK * 3,
+            category: input.category,
+          });
+          for (const m of factMatches) {
+            bumpFact(m.factId, 0.5 + m.score * 0.5, 'direct_facts');
+            perLayerCounts.fact_direct_facts++;
+          }
+        } catch (err) {
+          deps.logger.debug('arcana.retrieve.factRetrieval.layer0-failed', {
+            error: (err as Error).message,
+          });
+        }
+      }
 
       // ── Layer 1: direct FTS over memories (KB fact-retrieval.ts:113-280) ──
       // KB does FTS over the facts table; Arcana does FTS over memories
@@ -421,6 +504,7 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
           for (const m of matches) {
             // KB scoring (line 162-165): 0.5 + (matchRatio * 0.5)
             bump(m.memoryId, 0.5 + m.score * 0.5, 'direct');
+            perLayerCounts.memory_direct++;
           }
         } catch (err) {
           deps.logger.debug('arcana.retrieve.factRetrieval.layer1-failed', {
@@ -450,6 +534,18 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
               if (n.type !== 'memory') continue;
               // hop-0 entities → max score per KB pattern (line 427)
               bump(n.id, 1.0 * HOP_PENALTY[0], 'entity_expansion');
+              perLayerCounts.entity_expansion++;
+            }
+            // Surface this entity's facts as ScoredFact hits (KB-faithful:
+            // Layer 2 also produces fact hits via its fact join).
+            try {
+              const facts = await deps.structured.getFactsForEntity(e.name);
+              for (const f of facts) {
+                if (!f.isLatest) continue;
+                bumpFact(f.id, 1.0 * HOP_PENALTY[0], 'entity_expansion');
+              }
+            } catch {
+              /* swallow — fact surfacing is best-effort */
             }
           }
         }
@@ -482,6 +578,7 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
               // KB pattern (line 427): non-seed gets ef.confidence × penalty.
               // Without per-fact confidence here, use default 0.7 baseline.
               bump(mn.id, 0.7 * HOP_PENALTY[1], 'graph_expansion');
+              perLayerCounts.graph_expansion++;
             }
           }
         }
@@ -516,6 +613,7 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
               // entity match — baseline > Layer 2's max (1.0) so bridges
               // outrank single-entity matches in the final sort.
               bump(memoryId, 1.05 + Math.min(count - 2, 5) * 0.03, 'bridge');
+              perLayerCounts.bridge++;
             }
           }
         } catch (err) {
@@ -528,13 +626,12 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
       // ── Fusion + enrichment ─────────────────────────────────────────────
       const ranked = [...scored.values()].sort((a, b) => b.score - a.score).slice(0, topK);
 
-      const results: HybridSearchResult[] = [];
+      const supportingMemories: HybridSearchResult[] = [];
       for (const s of ranked) {
         const memory = await deps.structured.getMemory(s.memoryId);
         if (!memory) continue;
-        // Filter to active + isLatest (preserve prior behaviour)
         if (memory.status !== 'active' || memory.isLatest !== true) continue;
-        results.push({
+        supportingMemories.push({
           memory,
           score: s.score,
           keywordScore: s.source === 'direct' ? s.score : 0,
@@ -545,7 +642,72 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
         });
       }
 
-      return makeEnvelope(results);
+      // Resolve fact ids → ScoredFact[]. KB sorts facts by score desc.
+      const factEntries = [...factHits.values()].sort((a, b) => b.score - a.score);
+      const facts: ScoredFact[] = [];
+      const factSourceMemoryIds = new Set<string>();
+      for (const hit of factEntries.slice(0, topK)) {
+        const f = await deps.structured.getFact(hit.factId);
+        if (!f) continue;
+        facts.push({ fact: f, score: hit.score, source: hit.source });
+        if (f.sourceMemoryId) factSourceMemoryIds.add(f.sourceMemoryId);
+      }
+
+      // Layer 0 fan-out: surface memories backlinked by direct-fact hits
+      // when they aren't already represented in supportingMemories.
+      const presentMemoryIds = new Set(supportingMemories.map((m) => m.memory.id));
+      for (const memId of factSourceMemoryIds) {
+        if (presentMemoryIds.has(memId)) continue;
+        const memory = await deps.structured.getMemory(memId);
+        if (!memory) continue;
+        if (memory.status !== 'active' || memory.isLatest !== true) continue;
+        supportingMemories.push({
+          memory,
+          score: 0.5,
+          keywordScore: 0,
+          semanticScore: 0,
+          graphScore: 0,
+          matchType: 'keyword',
+          why: 'fact-retrieval/direct_facts',
+        });
+        presentMemoryIds.add(memId);
+      }
+
+      // Assemble context — KB fact-retrieval.ts:602-648 pattern.
+      const factLines = facts.map(
+        (f) => `- [${f.fact.category}] ${f.fact.fact} (confidence: ${f.fact.confidence.toFixed(2)})`,
+      );
+      const memoryLines = supportingMemories.map(
+        (m) => `[${m.memory.createdAt}] ${m.memory.content}`,
+      );
+      const sections: string[] = [];
+      if (factLines.length > 0) sections.push('FACTS:\n' + factLines.join('\n'));
+      if (memoryLines.length > 0) sections.push('SUPPORTING CONTEXT:\n' + memoryLines.join('\n\n'));
+      const assembledContext = sections.join('\n\n');
+      // KB convention (fact-retrieval.ts:65-67): ~4 chars per token.
+      const tokenEstimate = Math.ceil(assembledContext.length / 4);
+
+      const totalCandidates =
+        perLayerCounts.fact_direct_facts +
+        perLayerCounts.memory_direct +
+        perLayerCounts.entity_expansion +
+        perLayerCounts.graph_expansion +
+        perLayerCounts.bridge;
+
+      const stats = {
+        perLayerCounts,
+        totalCandidates,
+        deduplicatedCount: supportingMemories.length + facts.length,
+      };
+
+      const result: FactRetrievalResult = {
+        facts,
+        supportingMemories,
+        assembledContext,
+        tokenEstimate,
+        stats,
+      };
+      return makeEnvelope(result);
     },
   };
 }

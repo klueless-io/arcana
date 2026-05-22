@@ -130,10 +130,34 @@ In `arcana-core/src/retrieve/`:
 
 ## Findings appendix
 
-_Populated by the goal-runner during the port. Resolutions cite KB file:line + Arcana code location._
+_Populated during the port. Each resolution cites KB file:line + Arcana code location._
 
-- KB extraction prompt shape — read KB's extract-facts impl and port verbatim
-- Multi-entity handling on existing facts in tests — `widenLegacyFact` wraps `entity → [entity]`
-- FTS5 trigger ordering on UPDATE — KB uses delete+insert (claude.ts pattern); confirm
-- Rich-bundle field names — port verbatim from KB `factRetrieval` return
-- Token-estimate divisor — KB uses `length / 4` (rough chars-per-token); confirm
+### 1. KB extraction prompt shape — ported verbatim
+
+KB source: `kyberbot/packages/cli/src/brain/fact-extractor.ts:20-31` (`REALTIME_FACT_PROMPT`). The prompt asks for a JSON array where each fact has `content`, `category`, `confidence`, `entities` — no `attribute`/`value` triple decomposition (KB's extractor never produces that path).
+
+Arcana location: `packages/arcana-core/src/ingest/index.ts` — `REALTIME_FACT_PROMPT` constant, verbatim copy. Used by `extractFacts(memoryId)`.
+
+Validation steps also ported: length guard (50 chars), 2000-char input cap, 3-fact cap, content length (10-200 chars), reject empty `entities[]`, default invalid `category` to `'general'`. Confidence cap of 0.9 chosen (KB uses `min(fact.confidence, source_confidence, 0.60)` but the 0.60 ceiling is a KB-specific safety net; Arcana picks 0.9 as a more permissive upper bound matching its `FactSchema` constraint).
+
+### 2. Multi-entity handling on legacy facts — `widenLegacyFact` helper
+
+The v1.0.0 `FactSchema` removes the single `entity` field. To migrate pre-v1.0.0 facts in TypeScript code (separate from any DB migration), `LegacyFact` interface + `widenLegacyFact(old)` helper exported from `packages/arcana-contracts/src/fact.ts:75-105`. Wraps `entity → [entity]` and defaults `category` to `'general'`.
+
+KB has no equivalent (their schema was born with `entities_json`); this is an Arcana-only migration affordance.
+
+### 3. FTS5 trigger ordering on UPDATE — explicit pre-DELETE in storeFact
+
+KB pattern in `fact-store.ts:213-225` uses standard AFTER INSERT / AFTER DELETE / AFTER UPDATE triggers and `INSERT OR REPLACE` on the canonical row. In Arcana's port (`packages/arcana-provider-libsql/src/libsql-structured-store.ts`, `storeFact`), the AFTER DELETE trigger fired by the `INSERT OR REPLACE` conflict-replace path doesn't reliably clear the FTS5 shadow rows under libsql — a Paris-in-entities row persists in `facts_fts` after the canonical row is replaced.
+
+Resolution: `storeFact` issues `DELETE FROM facts_fts WHERE fact_id = ?` explicitly before `INSERT OR REPLACE INTO facts`. The AFTER INSERT trigger then rebuilds the shadow row from the new values. Tests `UPDATE trigger keeps facts_fts in sync` and `UPDATE trigger flushes both content and entities columns` (libsql-structured-store.test.ts:470-494) gate this behaviour.
+
+### 4. Rich-bundle field names — verbatim from KB `FactSearchResult`
+
+KB source: `fact-retrieval.ts:31-59`. Field names: `facts` (ScoredFact[]), `supporting_context` (Arcana renames → `supportingMemories` for type-system clarity), `assembled_context` (Arcana → `assembledContext`, camelCase per repo convention), `token_estimate` (Arcana → `tokenEstimate`), `stats.per_layer_counts` (Arcana → `stats.perLayerCounts`).
+
+Arcana location: `packages/arcana-core/src/retrieve/index.ts` — `FactRetrievalResult` interface. Source layer enum on `ScoredFact.source` matches KB's `'direct_facts' | 'entity_expansion' | 'graph_expansion' | 'bridge'`.
+
+### 5. Token-estimate divisor — `Math.ceil(length / 4)`
+
+KB source: `fact-retrieval.ts:65-67` — `const tokenEstimate = Math.ceil(assembled.length / 4);`. Rough chars-per-token approximation used to budget prompt assembly. Arcana ports this verbatim in the rich-bundle assembly step. Test gate: `retrieve/index.test.ts` — "returns rich-bundle shape" asserts `result.data.tokenEstimate === Math.ceil(result.data.assembledContext.length / 4)`.

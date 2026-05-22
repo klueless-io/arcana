@@ -54,11 +54,15 @@ CREATE TABLE IF NOT EXISTS edges (
 CREATE TABLE IF NOT EXISTS facts (
   id TEXT PRIMARY KEY,
   fact TEXT NOT NULL,
-  entity TEXT NOT NULL,
+  entities_json TEXT NOT NULL DEFAULT '[]',
   attribute TEXT,
   value TEXT,
   confidence REAL NOT NULL,
   source_type TEXT NOT NULL,
+  source_memory_id TEXT,
+  source_path TEXT,
+  source_conversation_id TEXT,
+  category TEXT NOT NULL DEFAULT 'general',
   created_at TEXT NOT NULL,
   last_reinforced_at TEXT,
   expires_at TEXT,
@@ -67,6 +71,11 @@ CREATE TABLE IF NOT EXISTS facts (
   surprisal_score REAL,
   scopes TEXT
 );
+
+CREATE INDEX IF NOT EXISTS idx_facts_category ON facts(category);
+CREATE INDEX IF NOT EXISTS idx_facts_source_memory_id ON facts(source_memory_id);
+CREATE INDEX IF NOT EXISTS idx_facts_source_conv ON facts(source_conversation_id);
+CREATE INDEX IF NOT EXISTS idx_facts_is_latest ON facts(is_latest);
 
 CREATE TABLE IF NOT EXISTS contradictions (
   id TEXT PRIMARY KEY,
@@ -129,5 +138,30 @@ CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE ON memories BEGIN
   DELETE FROM memories_fts WHERE memory_id = old.id;
   INSERT INTO memories_fts (memory_id, title, summary, content, tags)
   VALUES (new.id, new.title, new.summary, new.content, new.tags);
+END;
+
+-- v1.0.0 — Fulltext index over facts (mirrors KB fact-store.ts:213-225).
+-- fact_id is UNINDEXED so it doesn't participate in MATCH but can be
+-- selected and joined back to the canonical facts table for filters.
+CREATE VIRTUAL TABLE IF NOT EXISTS facts_fts USING fts5(
+  fact_id UNINDEXED,
+  content,
+  entities,
+  tokenize = 'unicode61 remove_diacritics 2'
+);
+
+CREATE TRIGGER IF NOT EXISTS facts_ai AFTER INSERT ON facts BEGIN
+  INSERT INTO facts_fts (fact_id, content, entities)
+  VALUES (new.id, new.fact, new.entities_json);
+END;
+
+CREATE TRIGGER IF NOT EXISTS facts_ad AFTER DELETE ON facts BEGIN
+  DELETE FROM facts_fts WHERE fact_id = old.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS facts_au AFTER UPDATE ON facts BEGIN
+  DELETE FROM facts_fts WHERE fact_id = old.id;
+  INSERT INTO facts_fts (fact_id, content, entities)
+  VALUES (new.id, new.fact, new.entities_json);
 END;
 `;
