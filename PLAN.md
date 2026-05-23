@@ -1,6 +1,6 @@
 # Plan: Arcana
 
-> **Status (2026-05-23, v1.2.0)**: The kernel is substantially complete and on npm. Sleep pipeline (10 KB-faithful steps), hybridSearch (4-channel), factRetrieval (5-layer), StructuredStore + VectorStore + LLMProvider + Scheduler contracts all live. KyberBot adoption swap is in progress (KBOT-side work; runs through `runParityHarness` per ADR 009). For per-version release notes see [CHANGELOG.md](./CHANGELOG.md). For the audit-driven Phase 2/3 backlog see [docs/SYSTEM-HEALTH.md](./docs/SYSTEM-HEALTH.md). For sprint-level plans see [docs/plans/](./docs/plans/).
+> **Status (2026-05-23, v1.2.0)**: The kernel is substantially complete and on npm. Sleep pipeline (10 KB-faithful steps), hybridSearch (4-channel), factRetrieval (5-layer), StructuredStore + VectorStore + LLMProvider + Scheduler contracts all live. KyberBot adoption swap is in progress (KyberBot-side work; runs through `runParityHarness` per ADR 009). For per-version release notes see [CHANGELOG.md](./CHANGELOG.md). For the audit-driven Phase 2/3 backlog see [docs/SYSTEM-HEALTH.md](./docs/SYSTEM-HEALTH.md). For sprint-level plans see [docs/plans/](./docs/plans/).
 >
 > Everything below this line is the **historical v0.1.0 plan**, retained for archaeology — the framing and the deferred items list no longer reflect current state.
 

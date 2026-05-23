@@ -233,4 +233,4 @@ Tracked here so they don't get lost. See [docs/SYSTEM-HEALTH.md](./docs/SYSTEM-H
 5. **Postgres provider** — gated on Kyber-in-Cloud migration off libsql. Consumer-driven; no work scheduled.
 6. **HTTP LLM provider** — `arcana-provider-llm-http` is queued per [ADR 012](./docs/decisions/012-llm-provider-architecture.md). Consumer-driven.
 7. **`ingestDocument`** — still stubbed in `ingest`; Ian (Kyber in Cloud) has implemented it on the cloud side. Spec sync pending.
-8. **Sleep pipeline v2** — five Arcana-invented steps (`collectCandidates`, `ingestionValidation`, `extractFacts`-in-sleep, `detectContradictions`, `computeSurprisal`) are deferred from v1.1.0 per [ADR 011](./docs/decisions/011-port-first-improve-later.md). Schedule after KBOT consumes v1 sleep.
+8. **Sleep pipeline v2** — five Arcana-invented steps (`collectCandidates`, `ingestionValidation`, `extractFacts`-in-sleep, `detectContradictions`, `computeSurprisal`) are deferred from v1.1.0 per [ADR 011](./docs/decisions/011-port-first-improve-later.md). Schedule after KyberBot consumes v1 sleep.

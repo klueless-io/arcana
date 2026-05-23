@@ -18,7 +18,7 @@ KB-faithful Layer 0 scoring fix. Driven by KyberBot's parity-harness reports (20
   const wordMatchRatio = matchedTokens.length / tokens.length;
   const score = 0.5 + wordMatchRatio * 0.5;
   ```
-  The FTS5 MATCH still considers both `content` and `entities` columns for *inclusion*; only the *score* is content-only. This eliminates the entity-column boost that was elbowing content-matching facts out of the top ranks (KBOT's "Pattern 2" — `q-hiking` "Alice hiking plans" returned Alice-entity-first instead of hiking-content-first).
+  The FTS5 MATCH still considers both `content` and `entities` columns for *inclusion*; only the *score* is content-only. This eliminates the entity-column boost that was elbowing content-matching facts out of the top ranks (KyberBot's "Pattern 2" — `q-hiking` "Alice hiking plans" returned Alice-entity-first instead of hiking-content-first).
 
 ### Added — `@kybernesis/arcana-contracts`
 
@@ -32,9 +32,9 @@ KB-faithful Layer 0 scoring fix. Driven by KyberBot's parity-harness reports (20
 
 - 350 → 352 (+2). New tests pin the KB-faithful score formula: an entity-only match scores 0.5 (`0 + 0*0.5`); a fully-content-matching single-token query scores 1.0; a 2-of-3-token partial match scores ≈ 0.833.
 
-### KBOT-side action
+### KyberBot-side action
 
-KyberBot's `arcana-fact-parity` harness should be re-run against `@kybernesis/arcana-*@1.2.1`. Expected `meanOverlap` jumps from 0.650 → 0.85+ on the Arcana-side fix alone. To reach 1.0, KBOT also needs to fix Pattern 1 (hyphen-as-FTS5-negation in `searchFactsDirect`'s ftsQuery construction) — see comms 2026-05-23 09:00 for the one-line fix.
+KyberBot's `arcana-fact-parity` harness should be re-run against `@kybernesis/arcana-*@1.2.1`. Expected `meanOverlap` jumps from 0.650 → 0.85+ on the Arcana-side fix alone. To reach 1.0, KyberBot also needs to fix Pattern 1 (hyphen-as-FTS5-negation in `searchFactsDirect`'s ftsQuery construction) — see comms 2026-05-23 09:00 for the one-line fix.
 
 ## v1.2.0 — 2026-05-22
 
