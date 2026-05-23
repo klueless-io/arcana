@@ -4,7 +4,7 @@
 
 Arcana defines the canonical knowledge-brain kernel for the Kybernesis product family — **KyberBot** (local agent runtime), **Kybernesis cloud** (multi-tenant memory SaaS), and future consumers (Kyber Desktop, embedded-in-Skills). Today KyberBot and Kybernesis cloud independently implement the same concepts — memory storage, fact extraction, sleep-pipeline maintenance, hybrid retrieval — with measurable drift (decay rates differ 2.5×, retrieval fusion algorithms differ, relation vocabularies are 15 vs 6). Arcana collapses that into one library all current and future Kybernesis products depend on.
 
-**Authoring approach**: code is written from scratch to the architecture below. KyberBot's existing `packages/cli/src/brain/*` and Kybernesis cloud's pipeline code are treated as **algorithmic references** — sources for understanding the problem domain, edge cases, and validated tuning constants — but are not lifted as source. Quality bar is set fresh.
+**Authoring approach** (revised 2026-05-21 per [ADR 011](./docs/decisions/011-port-first-improve-later.md)): code is **ported from KyberBot's empirical `packages/cli/src/brain/*`** — same algorithm shapes, same scoring constants, same step orders, same SQL/FTS semantics. KyberBot is the harness whose brain code already works in production; Arcana is the portable extraction of that brain. Port-first; improvements are queued as v2 work behind a flag, never bundled with the initial port. The parity gate ([ADR 009](./docs/decisions/009-parity-gate-for-consumer-swaps.md)) is how we know a port is faithful.
 
 It implements the **portable-cortex pattern**: a `kernel` (data model + sleep pipeline + retrieval logic) wrapped by pluggable `providers` (embedding, LLM, vector store, structured store, scheduler, queue) and `interfaces` (CLI, MCP, HTTP, channels, ingestion).
 
@@ -18,17 +18,17 @@ The architectural design source is `~/dev/ad/brains/kybernesis/arcana-spec.md` (
 
 | | |
 |---|---|
-| Language | TypeScript 5.7+, strict mode, ESM-only |
+| Language | TypeScript 5.9+, strict mode, ESM-only |
 | Runtime | Node 20+ (also: Convex runtime, Cloudflare Workers) |
-| Build | Plain `tsc` per package — no bundler |
-| Package mgr | **Bun workspaces** (≥ 1.1) |
+| Build | Plain `tsc -b` per package — no bundler |
+| Package mgr | Bun ≥ 1.3 (workspaces, install, test, build); **pnpm** for `publish -r` (workspace `:*` deps rewrite correctly) |
 | Validation | Zod 3 (re-exported from `arcana-contracts`) |
-| Tests | Vitest 2.x + `@kybernesis/arcana-testkit` (provider compliance suite) |
+| Tests | Vitest 4.x + `@kybernesis/arcana-testkit` (in-memory fakes + parity harness) |
 | Logging | Injected `Logger` interface — no logger dependency |
-| Publish | Manual version bump → GH Actions auto-tag + idempotent `npm view` skip |
+| Publish | Manual: bump versions → `pnpm publish -r --otp <code>` (OTP-gated). CI publish workflow is queued. |
 | License | MIT |
 | npm scope | `@kybernesis/arcana-*`, public registry |
-| Repo | `KybernesisAI/arcana` on GitHub, public |
+| Repo | `klueless-io/arcana` on GitHub, public |
 
 ## Commands
 
@@ -63,35 +63,47 @@ arcana/
 ├── packages/
 │   ├── arcana-contracts/         → Zod schemas, TS types, Logger interface, QueryResult envelope
 │   │   └── src/
-│   │       ├── memory.ts           Memory / Chunk / Entity / Edge / Fact / Contradiction / Insight / EntityProfile / AgentSelf
+│   │       ├── memory.ts           Memory / Chunk
+│   │       ├── entity.ts           Entity
+│   │       ├── edge.ts             Edge, NodeRef (discriminated union)
+│   │       ├── fact.ts             Fact (entities[] denormalised), FactCategory, widenLegacyFact migration helper
+│   │       ├── insight.ts          Insight, EntityProfile, ProfileEntry
+│   │       ├── agent-self.ts       AgentSelf (Letta-style memory blocks + history)
 │   │       ├── scopes.ts           ARP scoping fields (org_id, project_id, connection_id, source_did, classification)
-│   │       ├── providers.ts        Provider interfaces (StructuredStore, VectorStore, EmbeddingProvider, LLMProvider, Reranker, Scheduler, JobQueue)
+│   │       ├── providers.ts        Provider interfaces (StructuredStore — with transaction() primitive — VectorStore, EmbeddingProvider, LLMProvider, RerankerProvider, Scheduler, JobQueue)
 │   │       ├── logger.ts           Logger interface
 │   │       └── query-result.ts     QueryResult<T> freshness envelope
 │   │
 │   ├── arcana-core/              → Kernel — pure logic, no I/O
 │   │   └── src/
-│   │       ├── ingest/             storeMemory, ingestDocument
-│   │       ├── retrieve/           hybridSearch (RRF), factRetrieval, getEntityProfile
-│   │       ├── maintain/           sleep pipeline (12 steps, ordered)
+│   │       ├── config/             Zod-validated config loader (defaults → file → env). Absorbed from arcana-config (v0.x consolidation).
+│   │       ├── ingest/             storeMemory (transaction-wrapped), extractFacts (entity-normalised), ingestDocument (stub)
+│   │       ├── retrieve/           hybridSearch (4-channel RRF), factRetrieval (5-layer incl. direct fact-FTS)
+│   │       ├── maintain/           Sleep pipeline (10 KB-faithful steps, single-flight-guarded, partial-failure-aware) + config.ts + steps/
 │   │       └── access/
 │   │           ├── bindings/       createArcana() factory
-│   │           ├── query/          read-side facade
-│   │           └── command/        write-side facade
+│   │           ├── query/          read-side facade (queryFacts, getNeighbors, listContradictions, listInsights, readBlock, getBlockHistory)
+│   │           └── command/        write-side facade (recordFact, linkNodes, storeContradiction, updateMemory, markMemorySuperseded, markFactSuperseded)
 │   │
-│   ├── arcana-config/            → Zod-validated config loader (defaults → file → env)
-│   ├── arcana-testkit/           → Provider compliance harness — every provider runs the same suite
-│   └── arcana-providers-libsql/  → REFERENCE PROVIDER: StructuredStore impl backed by libsql
+│   ├── arcana-testkit/           → In-memory fakes + parity harness (runParityHarness for consumer swaps per ADR 009)
+│   ├── arcana-provider-libsql/   → REFERENCE: StructuredStore impl — libsql + FTS5 + recursive-CTE multi-hop + transaction primitive
+│   ├── arcana-provider-sqlite-vec/ → REFERENCE: VectorStore impl via sqlite-vec extension
+│   └── arcana-provider-llm-claude-code/ → REFERENCE: LLMProvider impl — subprocess to local claude CLI (no API key; uses Claude Code subscription)
 │
-├── docs/                          → Architecture notes, ADRs
-├── .github/workflows/
-│   ├── ci.yml                      Lint, typecheck, test on PR
-│   └── publish.yml                 Auto-tag on version bump, idempotent npm publish (config → contracts → core → providers)
-├── SPEC.md                        → This document
+├── docs/
+│   ├── SYSTEM-HEALTH.md            System-health audit (cross-layer patterns, phased remediation plan)
+│   ├── decisions/                  ADRs 001-013 (see ./docs/decisions/README.md index)
+│   ├── plans/                      Sprint plans (one per release)
+│   ├── audits/                     Investigation-driven audits (sleep gap analysis, etc.)
+│   └── reviews/                    Session checkpoints, handover docs
+├── .github/workflows/              CI (lint, typecheck, test). Publish workflow queued.
+├── .mochaccino/                    Live build documentation dashboards (data/*.json + views/*.html)
+├── CHANGELOG.md                    Per-version release notes (the most trustworthy "what shipped" reference)
+├── SPEC.md                        → This document (the build contract)
 ├── README.md
 ├── LICENSE                         MIT
 ├── package.json                   Workspace root
-├── bun.lock
+├── bun.lock                        Lock file (Bun)
 ├── tsconfig.base.json
 └── eslint.config.mjs
 ```
@@ -158,7 +170,7 @@ export function createArcana(opts: ArcanaOptions): Arcana {
 
 ## Testing Strategy
 
-- **Framework**: Vitest 2.x, one config at repo root, per-package overrides allowed.
+- **Framework**: Vitest 4.x, one config at repo root, per-package overrides allowed.
 - **Location**: `packages/<pkg>/src/**/*.test.ts` co-located with sources.
 - **Levels**:
   - **Unit** (kernel): pure-function tests against fakes from `arcana-testkit`. Cover decay math, RRF, Jaccard, tier classification.
@@ -195,26 +207,30 @@ export function createArcana(opts: ArcanaOptions): Arcana {
 - Mix ESM and CJS — ESM-only, no dual builds
 - Rename public API names *post-publish* without a major version bump and a deprecation cycle (pre-publish, renames are free — see [ADR 001](./docs/decisions/001-method-renames-before-publish.md))
 
-## Success Criteria (v0.1.0)
+## Current State (v1.2.0)
 
-Specific, testable:
+The original v0.1.0 success criteria have all been met (six packages publish to npm, the factory exists, the schemas exist, MIT license, no concrete-logger imports). For the live state of what's implemented vs stubbed, see [CHANGELOG.md](./CHANGELOG.md) and the `.mochaccino/` dashboards.
 
-- [ ] `bun install && bun run build && bun run test` passes cleanly on a fresh clone
-- [ ] Five packages publish to npm: `@kybernesis/arcana-contracts`, `-core`, `-config`, `-testkit`, `-providers-libsql`
-- [ ] GH Actions `publish.yml` is idempotent — re-running on an already-published version is a no-op
-- [ ] `createArcana()` factory exists and accepts the documented options; calling it returns an object with `.ingest`, `.retrieve`, `.maintain`
-- [ ] `arcana-testkit` exposes a `runComplianceSuite(provider)` function (suite may be a single placeholder test at v0.1)
-- [ ] All data-model types from `arcana-spec.md` §10 exist as Zod schemas in `arcana-contracts`
-- [ ] `LICENSE` is MIT, `README.md` explains what Arcana is and links back to `SPEC.md`
-- [ ] No package depends on Pino or any concrete logger
+The current health bar:
+
+- [x] `bun run build` exits 0
+- [x] `bun run test` exits 0 with 350+ tests across all 6 packages
+- [x] All six packages published to npm at v1.2.0
+- [x] `createArcana()` wires ingest/retrieve/maintain/access zones; `arcana-testkit` provides in-memory fakes + parity harness
+- [x] All data-model types from `arcana-spec.md` §10 exist as Zod schemas in `arcana-contracts`
+- [x] No package depends on Pino or any concrete logger
+- [ ] GH Actions `publish.yml` (queued — manual `pnpm publish -r --otp` works today)
+- [ ] Provider compliance suite (queued — see [docs/SYSTEM-HEALTH.md](./docs/SYSTEM-HEALTH.md) L8 UT-001)
 
 ## Open Questions
 
-Deferred to v0.2+ — captured here so they don't get lost:
+Tracked here so they don't get lost. See [docs/SYSTEM-HEALTH.md](./docs/SYSTEM-HEALTH.md) Phase 2 / Phase 3 for the audit-tracked items.
 
-1. **ARP scoping** — Promote ARP fields (`project_id`, `connection_id`, `source_did`, `classification`) to first-class kernel scoping vocabulary? Needs Martin (ARP steward) sign-off.
-2. **Relation vocabulary** — Unify the 15-type KyberBot vocab with the 6-type cloud vocab. Current proposal: 6 core + 9 extended.
-3. **Identity layer** — Support both Letta-style structured `memoryBlocks` AND markdown `SOUL.md` files behind one kernel API. Shape TBD.
-4. **Local-first default** — Should `providers-libsql` + embedded HNSW be the "just works" out-of-the-box setup (no Docker)? Implies a `providers-hnsw` package later.
-5. **Migration plans** — `kyberbot-adopt-arcana.md` and `kybernesis-adopt-arcana.md` are out of scope here; will be authored as separate documents once v0.1 contracts are validated.
-6. **Vitest 2.x vs 4.x** — previous discussion said "2/4"; locking 2.x as the safer pin. Override if 4.x is preferred.
+1. **ARP scoping** — promote `project_id`, `connection_id`, `source_did`, `classification` to first-class kernel scoping vocabulary? Needs Martin (ARP steward) sign-off.
+2. **Relation vocabulary** — unify the 15-type KyberBot vocab with the 6-type cloud vocab. Current proposal: 6 core + 9 extended.
+3. **Identity layer** — `AgentSelf` supports Letta-style `memoryBlocks`; markdown `SOUL.md` integration shape TBD.
+4. **Local-first default** — `arcana-provider-libsql` + `arcana-provider-sqlite-vec` is the "just works" stack today. Embedded HNSW package not on the roadmap unless a consumer needs it.
+5. **Postgres provider** — gated on Kyber-in-Cloud migration off libsql. Consumer-driven; no work scheduled.
+6. **HTTP LLM provider** — `arcana-provider-llm-http` is queued per [ADR 012](./docs/decisions/012-llm-provider-architecture.md). Consumer-driven.
+7. **`ingestDocument`** — still stubbed in `ingest`; Ian (Kyber in Cloud) has implemented it on the cloud side. Spec sync pending.
+8. **Sleep pipeline v2** — five Arcana-invented steps (`collectCandidates`, `ingestionValidation`, `extractFacts`-in-sleep, `detectContradictions`, `computeSurprisal`) are deferred from v1.1.0 per [ADR 011](./docs/decisions/011-port-first-improve-later.md). Schedule after KBOT consumes v1 sleep.

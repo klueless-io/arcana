@@ -1,3 +1,5 @@
+> **[SHIPPED in v0.3.0]** — historical reference. Live state lives in [CHANGELOG.md](../../CHANGELOG.md).
+
 # Plan — Parity Harness in `@kybernesis/arcana-testkit` (v0.3.0)
 
 **Date**: 2026-05-20

@@ -1,3 +1,5 @@
+> **[SHIPPED in v0.4.0]** — historical reference. Live state lives in [CHANGELOG.md](../../CHANGELOG.md).
+
 # Plan — Rebase Arcana's `hybridSearch` onto KyberBot's behaviour (v0.4.0)
 
 **Date**: 2026-05-21

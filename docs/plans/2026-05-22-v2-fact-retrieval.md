@@ -1,3 +1,5 @@
+> **[SHIPPED in v1.0.0]** — historical reference. Live state lives in [CHANGELOG.md](../../CHANGELOG.md).
+
 # Plan — v1.0.0 v2 factRetrieval (deepen Fact schema + fact-FTS + rich-bundle return)
 
 **Date**: 2026-05-22

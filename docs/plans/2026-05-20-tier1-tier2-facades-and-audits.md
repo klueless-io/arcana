@@ -1,3 +1,5 @@
+> **[SHIPPED in v0.2.1 + v0.3.1]** — historical reference. Live state lives in [CHANGELOG.md](../../CHANGELOG.md).
+
 # Plan — Tier 1 + Tier 2 (v0.2.1 facades + read-only audits)
 
 **Date**: 2026-05-20

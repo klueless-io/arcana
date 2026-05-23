@@ -108,3 +108,9 @@ Arcana stops being "any backend works" and becomes "any backend with full-text s
 ## Supersession
 
 This ADR narrows ADR 004's "make attribute/value optional, keep Fact minimal" decision. ADR 004's rationale was that consumers vary in how much structure they produce; the new rationale is that consumers (KyberBot specifically) need richer metadata than the minimum, and the original minimum has become an obstacle to parity. ADR 004 still governs the `attribute`/`value` optionality within the now-deeper schema.
+
+---
+
+## Known divergence from KB (added post-merge, 2026-05-23)
+
+**`FactSourceType` enum is Arcana-only.** KyberBot's `fact-store.ts` does not carry a `sourceType` column at all — origin is inferred from the calling code path. Arcana's `FactSchema.sourceType` (required, enum: `'terminal' | 'chat' | 'ai-extraction' | 'upload' | 'connector'`) is a deliberate Arcana addition for source-traceability across the multi-consumer roadmap (Kyber in Cloud needs origin-of-fact for the UI; KyberBot doesn't today). The system-health audit (docs/SYSTEM-HEALTH.md L9 F2) flagged this as a silent divergence; this note resolves the silence — divergence is intentional, surface is acknowledged. Postgres / Convex / future providers must accept the field; pre-v1.0.0 callers using `widenLegacyFact` get `sourceType: 'ai-extraction'` as the default (the safest assumption since that's what the LLM-extraction path produces).

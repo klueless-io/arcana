@@ -6,43 +6,65 @@ Arcana defines the shared memory substrate consumed by **KyberBot** (local agent
 
 ## Status
 
-**Pre-alpha — v0.1.0 in progress.** This is the scaffold milestone: packages publish, types/exports/CI wire up, but kernel methods are stubs. Real implementations land in v0.x. Consumer adoption (KyberBot, Kybernesis Brain) lands after that.
+**v1.2.0 — kernel stable, KyberBot adoption in progress.** All six packages publish to npm. The kernel ports KyberBot's empirical brain code per [ADR 011 — port-first, improve-later](./docs/decisions/011-port-first-improve-later.md): match the proven implementation before considering improvements. Sleep pipeline (10 KB-faithful steps), hybridSearch (4-channel RRF), factRetrieval (5-layer with direct fact-FTS), and the StructuredStore/VectorStore/LLMProvider/Scheduler contracts are all live. Remaining stubs are demand-driven (`ingestDocument`, three Convex-shaped facades).
+
+System-health verdict at v1.2.0: **AMBER** — solid core, audit-known seams documented in [docs/SYSTEM-HEALTH.md](./docs/SYSTEM-HEALTH.md), Phase 1 production-blockers fixed.
 
 ## Documentation
 
-- [`SPEC.md`](./SPEC.md) — the build contract: tech stack, project structure, success criteria, boundaries
-- [`PLAN.md`](./PLAN.md) — implementation plan + strategy (currently: demand-driven kernel implementation)
-- [`CHANGELOG.md`](./CHANGELOG.md) — release notes per package
-- [`docs/adoption/kyberbot.md`](./docs/adoption/kyberbot.md) — KyberBot adoption playbook
-- [`docs/adoption/kybernesis-brain.md`](./docs/adoption/kybernesis-brain.md) — Kybernesis Brain adoption playbook (handoff for Ian)
-- [`docs/decisions/`](./docs/decisions/) — Architecture Decision Records (ADRs) for non-obvious design + process decisions
-- [`.mochaccino/`](./.mochaccino/) — live build documentation (refreshed at each task close + kernel method implementation)
+- [`SPEC.md`](./SPEC.md) — the build contract: tech stack, project structure, code style, boundaries
+- [`CHANGELOG.md`](./CHANGELOG.md) — release notes per version (most trustworthy "what shipped" reference)
+- [`docs/SYSTEM-HEALTH.md`](./docs/SYSTEM-HEALTH.md) — system-health audit (cross-layer patterns, phased remediation plan)
+- [`docs/decisions/`](./docs/decisions/) — Architecture Decision Records ([README](./docs/decisions/README.md) indexes ADRs 001-013)
+- [`docs/plans/`](./docs/plans/) — sprint plans (one per release; current and historical)
+- [`.mochaccino/`](./.mochaccino/) — live build documentation dashboards
 
 The architectural design source lives outside this repo: `~/dev/ad/brains/kybernesis/arcana-spec.md`.
 
-## Local consumption (pre-npm-publish)
+## Install
 
-Until v0.1.0 publishes to npm, consumers reference Arcana packages via local `file:` deps:
-
-```json
-"dependencies": {
-  "@kybernesis/arcana-contracts": "file:../../arcana/packages/arcana-contracts",
-  "@kybernesis/arcana-config":    "file:../../arcana/packages/arcana-config",
-  "@kybernesis/arcana-core":      "file:../../arcana/packages/arcana-core"
-}
+```bash
+npm install @kybernesis/arcana-contracts \
+            @kybernesis/arcana-core \
+            @kybernesis/arcana-provider-libsql \
+            @kybernesis/arcana-provider-sqlite-vec \
+            @kybernesis/arcana-provider-llm-claude-code
 ```
 
-Adjust the relative path based on the consumer's location. Each Arcana rebuild + `pnpm install` (or `npm install`) in the consumer refreshes the linked code. See the adoption playbooks above for full setup instructions per consumer.
+`@kybernesis/arcana-testkit` is dev-only (provider compliance suite + parity harness).
 
-## Packages (planned for v0.1.0)
+## Packages
 
 | Package | Purpose |
 |---|---|
-| `@kybernesis/arcana-contracts` | Zod schemas, provider interfaces, `Logger`, `QueryResult<T>` |
-| `@kybernesis/arcana-config` | Zod-validated config loader |
-| `@kybernesis/arcana-core` | Kernel — `createArcana()` factory + ingest/retrieve/maintain/access zones |
-| `@kybernesis/arcana-testkit` | Provider compliance harness |
-| `@kybernesis/arcana-providers-libsql` | Reference `StructuredStore` implementation |
+| `@kybernesis/arcana-contracts` | Zod schemas (Memory, Fact, Edge, Entity, Insight, EntityProfile, Contradiction, AgentSelf), provider interfaces, `Logger`, `QueryResult<T>`, `Scopes` |
+| `@kybernesis/arcana-core` | Kernel — `createArcana()` factory + `ingest`/`retrieve`/`maintain`/`access` zones |
+| `@kybernesis/arcana-testkit` | In-memory fakes + parity harness (`runParityHarness`) for consumer swaps per [ADR 009](./docs/decisions/009-parity-gate-for-consumer-swaps.md) |
+| `@kybernesis/arcana-provider-libsql` | Reference `StructuredStore` impl — libsql + FTS5 + recursive-CTE multi-hop graph + transaction primitive |
+| `@kybernesis/arcana-provider-sqlite-vec` | `VectorStore` impl via the sqlite-vec extension |
+| `@kybernesis/arcana-provider-llm-claude-code` | `LLMProvider` impl via subprocess to the local `claude` CLI (no API key required — uses Claude Code subscription) |
+
+## Usage
+
+```ts
+import { createArcana } from '@kybernesis/arcana-core';
+import { createLibsqlStructuredStore } from '@kybernesis/arcana-provider-libsql';
+import { createSqliteVecVectorStore } from '@kybernesis/arcana-provider-sqlite-vec';
+import { createClaudeCodeLLMProvider } from '@kybernesis/arcana-provider-llm-claude-code';
+
+const arcana = createArcana({
+  structured: createLibsqlStructuredStore('./arcana.db'),
+  vector: createSqliteVecVectorStore('./arcana.db', { dimensions: 1536 }),
+  llm: createClaudeCodeLLMProvider(),
+  embed: yourEmbeddingProvider,
+});
+
+await arcana.providers.structured.connect();
+const id = await arcana.ingest.storeMemory({ content: 'hello world', source: 'cli' });
+const facts = await arcana.ingest.extractFacts(id);
+const results = await arcana.retrieve.hybridSearch({ query: 'hello' });
+await arcana.maintain.runSleepPipeline();
+```
 
 ## License
 

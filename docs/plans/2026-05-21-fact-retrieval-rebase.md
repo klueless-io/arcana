@@ -1,3 +1,5 @@
+> **[SHIPPED in v0.4.1]** — historical reference. Live state lives in [CHANGELOG.md](../../CHANGELOG.md).
+
 # Plan — Rebase `factRetrieval` onto KyberBot's empirical impl (v0.4.1)
 
 **Date**: 2026-05-21

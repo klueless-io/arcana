@@ -1,3 +1,5 @@
+> **[SHIPPED in v1.1.0]** — historical reference. Live state lives in [CHANGELOG.md](../../CHANGELOG.md).
+
 # Plan — v1.1.0 Sleep Pipeline Implementation
 
 **Date**: 2026-05-22

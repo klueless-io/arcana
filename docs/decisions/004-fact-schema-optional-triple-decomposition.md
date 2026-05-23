@@ -1,9 +1,11 @@
 # ADR 004 — Fact schema: sentence required, triple decomposition optional
 
-**Status**: Accepted (supersedes ADR 003)
+**Status**: Accepted (supersedes ADR 003); **narrowed by [ADR 013](./013-fact-schema-deepening-before-sleep.md)** for v1.0.0 entity multi-value support
 **Date**: 2026-05-18
 **Decider**: David Cruwys (AppyDave)
 **Discovered by**: David's challenge to the Fact triple semantic ("what problem does it solve?")
+
+> **Update (v1.0.0, 2026-05-22)**: This ADR's "single `entity` field is enough" framing is narrowed by ADR 013. `FactSchema.entity: string` became `FactSchema.entities: string[]` (denormalised multi-entity list) to match KyberBot's empirical fact-store. The optional `attribute` / `value` triple decomposition decision in this ADR is unchanged. Pre-v1.0.0 callers can migrate via `widenLegacyFact(old)` exported from `@kybernesis/arcana-contracts`.
 
 ## Context
 

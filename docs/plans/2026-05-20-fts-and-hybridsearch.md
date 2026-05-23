@@ -1,3 +1,5 @@
+> **[SHIPPED in v0.2.0 (note: hybridSearch later rebased in v0.4.0 — see 2026-05-21-hybrid-search-rebase.md)]** — historical reference. Live state lives in [CHANGELOG.md](../../CHANGELOG.md).
+
 # Sprint Plan — FTS contract + hybridSearch architecture
 
 **Date**: 2026-05-20

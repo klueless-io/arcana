@@ -250,3 +250,11 @@ Cleans the entity graph: removes transcription artifacts (Speaker 0, Speaker 1),
 ```
 
 **ADR 010 decision:** Accept both consolidate and observe as explicit pipeline steps. This aligns Arcana's contract with KyberBot's proven operational pattern and leaves room for future broadening of extractFacts without disrupting consolidation or contradiction handling.
+
+---
+
+## Closing note (2026-05-23, post-v1.1.0)
+
+This audit recommended **Option A** — add `consolidate` + `observe` as steps 14/15 within Arcana's 13-step list. The actual v1.1.0 sprint took a different path: **adopt KyberBot's 10-step pipeline as v1, defer Arcana's 4 invented steps to v2 sleep**. Per ADR 011 (port-first), KB's empirical pipeline is the v1 baseline; speculative additions are v2 work behind a flag. The audit's "13 + 2 = 15" framing was correct in spirit (acknowledge the consolidate/observe gap) but wrong in shape (the gap was Arcana's invented steps, not KB's missing ones). v1.1.0's resolution is documented in [ADR 010 — Superseded](../decisions/010-sleep-pipeline-step-reconciliation.md) and [ADR 011 — port-first](../decisions/011-port-first-improve-later.md).
+
+This audit is retained as historical context. Future readers should treat ADR 010's resolution + the v1.1.0 CHANGELOG as authoritative for the actual sleep pipeline shape.

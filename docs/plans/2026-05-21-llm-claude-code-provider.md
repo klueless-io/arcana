@@ -1,3 +1,5 @@
+> **[SHIPPED in v0.5.0]** — historical reference. Live state lives in [CHANGELOG.md](../../CHANGELOG.md).
+
 # Plan — `arcana-provider-llm-claude-code` package (v0.5.0)
 
 **Date**: 2026-05-21
