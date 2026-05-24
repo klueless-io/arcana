@@ -246,6 +246,14 @@ export interface FactsFulltextMatch {
    * boost (see comms 2026-05-23 09:00).
    */
   content: string;
+  /**
+   * v2.1.2 — the tokens the provider actually queried with, after stopword
+   * filtering and minTokenLength. Used by `factRetrieval` as the denominator
+   * for wordMatchRatio so that stopwords removed from the FTS query are not
+   * counted against the score (fixes minMatchRatio over-dropping when the
+   * outer query contains stopwords).
+   */
+  queryTokens?: string[];
 }
 
 /**

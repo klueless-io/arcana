@@ -213,7 +213,22 @@ export function createFakeStructuredStore(): StructuredStore {
     },
 
     searchFactsFulltext: async (query, opts) => {
-      const tokens = query.toLowerCase().split(/\s+/).filter((w) => w.length > 0);
+      const minLen = opts?.minTokenLength ?? 3;
+      const stopwordsAdd = new Set((opts?.stopwordsAdd ?? []).map((w) => w.toLowerCase()));
+      const stopwordsRemove = new Set((opts?.stopwordsRemove ?? []).map((w) => w.toLowerCase()));
+      // Mirror the provider's token filtering so queryTokens reflects what was searched.
+      const FAKE_STOPWORDS = new Set([
+        'a', 'an', 'the', 'and', 'or', 'but',
+        'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+        'is', 'are', 'was', 'were', 'be', 'been',
+        'this', 'that', 'these', 'those',
+        'what', 'when', 'where', 'who', 'how', 'why',
+      ]);
+      const effectiveStopwords = new Set(FAKE_STOPWORDS);
+      for (const w of stopwordsAdd) effectiveStopwords.add(w);
+      for (const w of stopwordsRemove) effectiveStopwords.delete(w);
+      const allTokens = query.toLowerCase().split(/\s+/).filter((w) => w.length > 0);
+      const tokens = allTokens.filter((w) => w.length >= minLen && !effectiveStopwords.has(w));
       if (tokens.length === 0) return [];
       const selectedFields = opts?.fields ?? (['content', 'entities'] as const);
       const latestOnly = opts?.latestOnly ?? true;
@@ -222,6 +237,7 @@ export function createFakeStructuredStore(): StructuredStore {
         score: number;
         matchedFields: ('content' | 'entities')[];
         content: string;
+        queryTokens: string[];
       }> = [];
       for (const f of facts.values()) {
         if (latestOnly && !f.isLatest) continue;
@@ -251,6 +267,7 @@ export function createFakeStructuredStore(): StructuredStore {
           score: Math.min(1, hits / (tokens.length * selectedFields.length)),
           matchedFields,
           content: f.fact,
+          queryTokens: tokens,
         });
       }
       matches.sort((a, b) => b.score - a.score);

@@ -502,9 +502,14 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
             minTokenLength: input.minTokenLength,
           });
           for (const m of factMatches) {
+            // Use the provider's filtered tokens as denominator so stopwords
+            // removed from the FTS query don't count against the ratio.
+            // Falls back to outer tokens when provider doesn't populate queryTokens.
+            const scoreTokens = m.queryTokens ?? tokens;
+            if (scoreTokens.length === 0) continue;
             const contentLower = m.content.toLowerCase();
-            const matchedTokens = tokens.filter((t) => contentLower.includes(t));
-            const wordMatchRatio = matchedTokens.length / tokens.length;
+            const matchedTokens = scoreTokens.filter((t) => contentLower.includes(t));
+            const wordMatchRatio = matchedTokens.length / scoreTokens.length;
             if (wordMatchRatio < minMatchRatio) continue;
             const score = 0.5 + wordMatchRatio * 0.5;
             bumpFact(m.factId, score, 'direct_facts');
