@@ -70,17 +70,45 @@ function escapeLike(s: string): string {
 const MAX_FTS_QUERY_LENGTH = 10_000;
 
 /**
+ * v2.1 — common English words that add noise to FTS5 queries without
+ * discriminating between facts. Operator can extend or override per-query
+ * via BuildFtsQueryOpts.
+ */
+const DEFAULT_STOPWORDS = new Set([
+  'a', 'an', 'the', 'and', 'or', 'but',
+  'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+  'is', 'are', 'was', 'were', 'be', 'been',
+  'this', 'that', 'these', 'those',
+  'what', 'when', 'where', 'who', 'how', 'why',
+]);
+
+interface BuildFtsQueryOpts {
+  stopwordsAdd?: string[];
+  stopwordsRemove?: string[];
+  /** Minimum token length after punctuation stripping (default 3). */
+  minTokenLength?: number;
+}
+
+/**
  * Build an FTS5 MATCH query from a natural-language string. Words are
- * lowercased, double-quote-escaped, and OR'd together. Returns null when
+ * lowercased, double-quote-escaped, and OR'd together. Stopwords and
+ * short tokens are filtered before the query is built. Returns null when
  * the input has no usable tokens OR exceeds MAX_FTS_QUERY_LENGTH.
  */
-function buildFtsQuery(query: string): { ftsQuery: string; tokens: string[] } | null {
+function buildFtsQuery(
+  query: string,
+  opts?: BuildFtsQueryOpts,
+): { ftsQuery: string; tokens: string[] } | null {
   if (query.length > MAX_FTS_QUERY_LENGTH) return null;
+  const minLen = opts?.minTokenLength ?? 3;
+  const stopwords = new Set(DEFAULT_STOPWORDS);
+  for (const w of opts?.stopwordsAdd ?? []) stopwords.add(w.toLowerCase());
+  for (const w of opts?.stopwordsRemove ?? []) stopwords.delete(w.toLowerCase());
   const tokens = query
     .toLowerCase()
     .split(/\s+/)
     .map((w) => w.replace(/[^\p{L}\p{N}]/gu, ''))
-    .filter((w) => w.length > 0);
+    .filter((w) => w.length >= minLen && !stopwords.has(w));
   if (tokens.length === 0) return null;
   const ftsQuery = tokens.map((w) => `"${w.replace(/"/g, '""')}"`).join(' OR ');
   return { ftsQuery, tokens };
@@ -683,7 +711,11 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
       opts?: FactsFulltextSearchOpts,
     ): Promise<FactsFulltextMatch[]> => {
       assertConnected(db);
-      const built = buildFtsQuery(query);
+      const built = buildFtsQuery(query, {
+        stopwordsAdd: opts?.stopwordsAdd,
+        stopwordsRemove: opts?.stopwordsRemove,
+        minTokenLength: opts?.minTokenLength,
+      });
       if (!built) return [];
       const { ftsQuery, tokens } = built;
       const topK = opts?.topK ?? 50;

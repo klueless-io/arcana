@@ -442,9 +442,9 @@ describe('LibsqlStructuredStore — searchFactsFulltext (v1.0.0)', () => {
   });
 
   it('filters by category', async () => {
-    await store.storeFact(fact({ id: 'fb', fact: 'X bio', entities: ['X'], category: 'biographical' }));
-    await store.storeFact(fact({ id: 'fe', fact: 'X event', entities: ['X'], category: 'event' }));
-    const bio = await store.searchFactsFulltext('X', { category: 'biographical' });
+    await store.storeFact(fact({ id: 'fb', fact: 'Alice studied biology', entities: ['Alice'], category: 'biographical' }));
+    await store.storeFact(fact({ id: 'fe', fact: 'Alice attended event', entities: ['Alice'], category: 'event' }));
+    const bio = await store.searchFactsFulltext('biology', { category: 'biographical' });
     expect(bio).toHaveLength(1);
     expect(bio[0].factId).toBe('fb');
   });

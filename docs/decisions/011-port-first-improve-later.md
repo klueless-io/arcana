@@ -109,17 +109,20 @@ This sprint also adds the `Memory.createdAt` schema field needed by the temporal
 
 ## Status of parity verification
 
-Per the system-health audit (docs/SYSTEM-HEALTH.md), the "100% parity" bar set above is the *target*. Actual measured parity against KyberBot fixtures is *pending* — no consumer has yet run the parity harness with real KB fixtures. This section converts the aspirational "100%" into auditable accounting and will be updated as fixtures land.
+Per the system-health audit (docs/SYSTEM-HEALTH.md), the "100% parity" bar set above is the *target*. This section tracks auditable measurements as fixtures land.
 
 | Ported capability | Target | Measured | Gap |
 |---|---|---|---|
 | `hybridSearch` (v0.4.0) | 100% memory-id overlap on KB fixtures | pending KB fixtures | TBD |
-| `factRetrieval` (v0.4.1 → v1.0.0) | 100% memory-id + fact-id overlap | pending KB fixtures | TBD |
-| Sleep pipeline (v1.1.0) | All 10 KB steps run end-to-end against a real arcana instance | pending KB integration | TBD |
+| `factRetrieval` (v0.4.1 → v1.2.1) | 100% fact-id overlap | **0.958 meanOverlap** (KyberBot `cortex-adoption` branch, 2026-05-24) | 0.042 — two queries, both diagnosed (see below) |
+| Sleep pipeline (v1.1.0) | All 10 KB steps run end-to-end against a real cortex instance | pending KB integration | TBD |
+
+**`factRetrieval` 0.042 residual gap — diagnosed, not algorithmic:**
+
+- `q-kube-outage` 0.83 — KB returns `bio-2` via `bob` token; Cortex does not. Root cause: parity harness seeds only facts, not entities + edges; Cortex Layer 4 memory-bridge cannot fire without entity + edge data. Resolves when KyberBot expands workstream A/B harness seeding. Not a Cortex code change.
+- `q-events-april` 0.88 — Cortex returns 3 extra low-signal facts (`bio-4`, `tmp-3`, `pln-2`) via FTS5 stopword over-match (`"in"` matching every fact containing "in"). Resolves when Cortex's v2.1.0 layered-defence ships (Gap 1 fix: DEFAULT_STOPWORDS + minMatchRatio floor). See comms 2026-05-24 KBOT GAP NOTE.
 
 Known port-time divergences (not parity misses — deliberate or non-blocking):
-- `FactSourceType` enum (Arcana-only — KB has no `sourceType` column; v1.0.0 kept for source-traceability)
+- `FactSourceType` enum (Cortex-only — KB has no `sourceType` column; kept for source-traceability)
 - `rebuildUserProfile` uses "top entity by mentionCount" heuristic vs KB's explicit user-profile module (v2 sleep candidate)
 - v1.1.0 sleep omits KB's AI-merge phases in `cleanEntityGraph` and its `sleep.db` telemetry tables (v2 sleep)
-
-When KyberBot's `arcana-adoption` branch runs the parity harness with real fixtures, update this table with the measured numbers. Anything below 100% becomes a Phase-2 fix ticket against the next minor release.

@@ -224,6 +224,12 @@ export interface FactsFulltextSearchOpts {
   category?: FactCategory;
   /** When true (default), only return facts where isLatest = true. */
   latestOnly?: boolean;
+  /** v2.1 — additional domain-specific stopwords to filter from the FTS query. */
+  stopwordsAdd?: string[];
+  /** v2.1 — words to keep that the default stopword list would drop. */
+  stopwordsRemove?: string[];
+  /** v2.1 — minimum token length after stripping punctuation (default 3). */
+  minTokenLength?: number;
 }
 
 export interface FactsFulltextMatch {

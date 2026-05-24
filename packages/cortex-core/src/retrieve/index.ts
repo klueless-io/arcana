@@ -65,6 +65,14 @@ export interface FactRetrievalInput {
   tokenBudget?: number;
   /** v1.0.0 — filter Layer 0 fact-FTS to a single category. */
   category?: FactCategory;
+  /** v2.1 — minimum word-match ratio for a Layer 0 fact to be included (default 0.2). */
+  minMatchRatio?: number;
+  /** v2.1 — additional domain-specific stopwords to filter from the FTS query. */
+  stopwordsAdd?: string[];
+  /** v2.1 — words to keep that the default stopword list would drop. */
+  stopwordsRemove?: string[];
+  /** v2.1 — minimum token length passed to the FTS provider (default 3). */
+  minTokenLength?: number;
 }
 
 /**
@@ -481,17 +489,22 @@ export function createRetrieve(deps: RetrieveDeps): RetrieveApi {
       // Cortex Layer 0 score-identical to KB's `searchFactsDirect`.
       // The FTS5 MATCH still considers both columns for *inclusion*; only
       // the *score* is content-only.
+      const minMatchRatio = input.minMatchRatio ?? 0.2;
       if (tokens.length > 0) {
         try {
           const factMatches = await deps.structured.searchFactsFulltext(input.query, {
             scopes: input.scopes,
             topK: topK * 3,
             category: input.category,
+            stopwordsAdd: input.stopwordsAdd,
+            stopwordsRemove: input.stopwordsRemove,
+            minTokenLength: input.minTokenLength,
           });
           for (const m of factMatches) {
             const contentLower = m.content.toLowerCase();
             const matchedTokens = tokens.filter((t) => contentLower.includes(t));
             const wordMatchRatio = matchedTokens.length / tokens.length;
+            if (wordMatchRatio < minMatchRatio) continue;
             const score = 0.5 + wordMatchRatio * 0.5;
             bumpFact(m.factId, score, 'direct_facts');
             perLayerCounts.fact_direct_facts++;
