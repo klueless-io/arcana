@@ -67,9 +67,9 @@
 <body>
 
 <div class="header">
-  <div class="wordmark">// <em>ARCANA</em> · PROVIDER LANDSCAPE</div>
+  <div class="wordmark">// <em>CORTEX</em> · PROVIDER LANDSCAPE</div>
   <h1>Provider Landscape</h1>
-  <div class="tagline">6 provider interfaces · 2 real providers · 4 in-memory fakes · 2 consumer adapters · 1 planned</div>
+  <div class="tagline">7 provider interfaces · 3 real providers · 4 in-memory fakes · 2 consumer adapters · 1 planned · v2.1.0 · 2026-05-24</div>
 </div>
 
 <div class="legend">
@@ -163,11 +163,16 @@
     </div>
     <div class="impl-list">
       <div class="impl">
+        <div class="impl-name">cortex-provider-llm-claude-code</div>
+        <div class="impl-detail">Claude Code CLI subprocess (claude -p). No API key — uses local subscription. Port of KyberBot claude.ts. 13 tests. Shipped v0.5.0.</div>
+        <div class="impl-badge badge-real">real</div>
+        <div class="impl-badge badge-new">new v0.5.0</div>
+      </div>
+      <div class="impl">
         <div class="impl-name">FakeLLMProvider</div>
-        <div class="impl-detail">Returns static fixture responses. Sleep pipeline is entirely stubbed so LLM calls never fire in tests.</div>
+        <div class="impl-detail">Returns static fixture responses. Used across unit tests. Sleep pipeline tests call through this.</div>
         <div class="impl-badge badge-fake">fake · testkit</div>
       </div>
-      <div class="impl-none">No real Cortex provider yet — sleep pipeline is stubbed, so no consumer demand. KyberBot wires its own LLM adapter.</div>
     </div>
   </div>
 
@@ -175,13 +180,13 @@
   <div class="iface-col">
     <div class="iface-header">
       <div class="iface-name">RerankerProvider</div>
-      <div class="iface-desc">Re-scores search results by semantic relevance. Used in hybridSearch layer 4 (context weighting).</div>
+      <div class="iface-desc">Re-scores search results by semantic relevance. Optional in hybridSearch — accepted in CortexOptions, skipped when absent.</div>
     </div>
     <div class="impl-list">
-      <div class="impl-none">No implementation — fake or real. hybridSearch is stubbed, so no consumer demand yet.</div>
+      <div class="impl-none">No real or fake implementation yet. hybridSearch accepts optional reranker — omit to skip. No consumer demand for a specific provider yet.</div>
       <div class="impl">
         <div class="impl-name">cortex-provider-cohere-rerank</div>
-        <div class="impl-detail">Not built. Will be demanded when hybridSearch layer 4 is implemented.</div>
+        <div class="impl-detail">Not built. Demand-driven — will ship when a consumer wires a reranker into hybridSearch.</div>
         <div class="impl-badge badge-planned">planned</div>
       </div>
     </div>
@@ -194,7 +199,7 @@
       <div class="iface-desc">Sleep pipeline orchestration — schedule recurring jobs, enqueue/dequeue sleep steps.</div>
     </div>
     <div class="impl-list">
-      <div class="impl-none">No implementations. Sleep pipeline is entirely stubbed (13 steps). Both interfaces will be demanded together when sleep implementation begins.</div>
+      <div class="impl-none">No real implementations yet. Sleep pipeline (v1.1.0) is implemented and calls deps.scheduler.schedule(). CortexOptions.scheduler is optional — falls back to NotImplementedError stub when absent.</div>
       <div class="impl">
         <div class="impl-name">cortex-provider-bun-scheduler</div>
         <div class="impl-detail">Not built. Candidate for KyberBot-native sleep scheduling (Bun.cron / Bun.sleep).</div>
@@ -259,7 +264,7 @@
   }
 
   document.getElementById('copy-btn').addEventListener('click', () => {
-    const lines = ['ARCANA PROVIDER LANDSCAPE — context', ''];
+    const lines = ['CORTEX PROVIDER LANDSCAPE — context', ''];
     let currentIface = null;
     document.querySelectorAll('.impl-wrap').forEach(wrap => {
       if (!wrap.querySelector('.row-check').checked) return;
