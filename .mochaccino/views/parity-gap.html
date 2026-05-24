@@ -75,9 +75,9 @@
 <body>
 
 <div class="header">
-  <div class="wordmark">// <em>ARCANA</em> · PARITY GAP</div>
+  <div class="wordmark">// <em>CORTEX</em> · PARITY GAP</div>
   <h1>Parity Gap</h1>
-  <div class="tagline">What Cortex has · what each consumer uses or needs · 4 consumers · v1.2.0 · 2026-05-23</div>
+  <div class="tagline">What Cortex has · what each consumer uses or needs · 4 consumers · v2.1.0 · 2026-05-24 · KyberBot 0.958 meanOverlap measured</div>
 </div>
 
 <div class="legend">
@@ -145,24 +145,24 @@
 </tr>
 
 <tr>
-  <td class="area-cell"><div class="area-name">Fact retrieval</div><div class="area-desc">factRetrieval — scored search with entity expansion</div></td>
-  <td class="status-cell"><div class="chip c-partial">◐ Partial</div><div class="detail">Structured text-match only · no FTS5 · word-hit scoring · 4 tests</div></td>
-  <td class="status-cell"><div class="chip c-na">— Not wired</div><div class="detail">KyberBot has local fact-retrieval.ts</div></td>
+  <td class="area-cell"><div class="area-name">Fact retrieval</div><div class="area-desc">factRetrieval — 4-layer scored search with entity expansion + Gap 1 layered defence</div></td>
+  <td class="status-cell"><div class="chip c-done">✓ v2.1.0</div><div class="detail">KB-faithful 4-layer flow · FTS5 + entity expansion + graph hop + bridge · Gap 1: stopwords + minMatchRatio floor · 0.958 parity measured 2026-05-24</div></td>
+  <td class="status-cell"><div class="chip c-partial">◐ Parallel</div><div class="detail">KyberBot has local fact-retrieval.ts · swap pending parity gate re-run post v2.1.0 publish (expected ≈0.983)</div></td>
   <td class="status-cell"><div class="chip c-blocked">✗ Blocked</div><div class="detail">Needs full scored retrieval with entity expansion</div></td>
   <td class="status-cell"><div class="chip c-local">Local impl</div><div class="detail">fact-retrieval.ts — FTS5 + vector cosine search (sqlite-vec). More capable than Cortex's current structured-only path.</div></td>
 </tr>
 
 <tr>
-  <td class="area-cell"><div class="area-name">Hybrid search</div><div class="area-desc">hybridSearch — FTS5 + vector + graph BFS + recency</div></td>
-  <td class="status-cell"><div class="chip c-blocked">✗ Stubbed</div><div class="detail">NotImplementedError · needs FTS5 in StructuredStore + sqlite-vec wired · next sprint</div></td>
-  <td class="status-cell"><div class="chip c-local">Local 4-layer</div><div class="detail">FTS5 + vector + graph BFS + context weighting working locally. Hasn't demanded Cortex's hybridSearch yet.</div></td>
+  <td class="area-cell"><div class="area-name">Hybrid search</div><div class="area-desc">hybridSearch — semantic + FTS5 + temporal + entity-name-filter · RRF k=60</div></td>
+  <td class="status-cell"><div class="chip c-done">✓ Implemented</div><div class="detail">KB-faithful 4-channel topology (v0.4.0 rebase per ADR 011) · matchType: semantic|keyword|both · graphHops/graphScore deprecated · per-channel failure isolation · optional reranker</div></td>
+  <td class="status-cell"><div class="chip c-partial">◐ Parallel</div><div class="detail">KyberBot local hybrid-search.ts · swap pending parity gate per ADR 009 · parity expected 100% on KB-faithful channels</div></td>
   <td class="status-cell"><div class="chip c-na">— Missing</div><div class="detail">Brain doesn't have hybrid search</div></td>
   <td class="status-cell"><div class="chip c-local">Local impl</div><div class="detail">Fact-retrieval.ts uses FTS5 + sqlite-vec cosine. Entity expansion via entity_relations. Most advanced search of the 4 consumers.</div></td>
 </tr>
 
 <tr>
-  <td class="area-cell"><div class="area-name">Timeline query</div><div class="area-desc">queryFacts(asOf) — bitemporal</div></td>
-  <td class="status-cell"><div class="chip c-blocked">✗ Missing</div><div class="detail">Not stubbed · identified ADR 008 · Brain migration gate</div></td>
+  <td class="area-cell"><div class="area-name">Timeline query</div><div class="area-desc">queryFacts(asOf) — bitemporal valid-time filter</div></td>
+  <td class="status-cell"><div class="chip c-done">✓ Implemented</div><div class="detail">Optional asOf: ISO-8601 param on queryFacts + getFactsForEntity · libsql filters in SQL · backward compat (omit asOf = prior behavior)</div></td>
   <td class="status-cell"><div class="chip c-na">— N/A</div><div class="detail">KyberBot doesn't use temporal queries</div></td>
   <td class="status-cell"><div class="chip c-blocked">✗ Needed</div><div class="detail">Brain uses expiresAt on facts. Needs bitemporal filter.</div></td>
   <td class="status-cell"><div class="chip c-local">Implicit</div><div class="detail">facts.expires_at column exists. No explicit temporal query API — expiry handled in sleep/entity-hygiene step.</div></td>
@@ -199,8 +199,8 @@
 <tr class="sec-row"><td colspan="5"><div class="sec-label">Sleep pipeline</div></td></tr>
 
 <tr>
-  <td class="area-cell"><div class="area-name">Sleep pipeline</div><div class="area-desc">Background consolidation cycle</div></td>
-  <td class="status-cell"><div class="chip c-blocked">✗ Stubbed</div><div class="detail">All 13 steps throw NotImplementedError · SLEEP_STEPS const defined</div></td>
+  <td class="area-cell"><div class="area-name">Sleep pipeline</div><div class="area-desc">Background consolidation cycle — 10-step KB-faithful</div></td>
+  <td class="status-cell"><div class="chip c-done">✓ Implemented</div><div class="detail">v1.1.0 — 10-step pipeline (KB verbatim): decayMemories→refreshTags→consolidate→linkMemories→tier→summarize→observe→rebuildProfile→runReasoning→cleanEntityGraph · startSleepSchedule + stopSleepSchedule also implemented</div></td>
   <td class="status-cell"><div class="chip c-local">9-step local</div><div class="detail">Working 9-step pipeline · hasn't demanded Cortex's sleep implementation yet · will be the demand signal</div></td>
   <td class="status-cell"><div class="chip c-blocked">✗ Needs all 13</div><div class="detail">Needs: temporal expiry, surprisal computation, entity dedup, profile regen — 4 steps beyond KyberBot's 9</div></td>
   <td class="status-cell"><div class="chip c-local">10-step local</div><div class="detail">sleep-scheduler.ts runs per-agent. Entity dedup (Phase 2-3 AI-assisted) working. Artifact cleanup step active. More advanced than Cortex's 13-step design in some areas.</div></td>
@@ -210,8 +210,8 @@
 
 <tr>
   <td class="area-cell"><div class="area-name">npm / Cortex adoption</div><div class="area-desc">Using @kybernesis/* packages</div></td>
-  <td class="status-cell"><div class="chip c-done">✓ v0.4.0 live</div><div class="detail">5 packages · semver verified · 2026-05-21 · ADR 011 port-first applied</div></td>
-  <td class="status-cell"><div class="chip c-partial">◐ Merge pending</div><div class="detail">EC-015 applied · awaiting file: → ^0.1.1 swap + cortex-adoption merge</div></td>
+  <td class="status-cell"><div class="chip c-done">✓ v2.1.0 staged</div><div class="detail">6 packages · awaiting OTP · v2.0.0 live (renamed from arcana-*) · v2.1.0 pending publish · ADR 014 rename + ADR 011 port-first</div></td>
+  <td class="status-cell"><div class="chip c-partial">◐ Adoption branch</div><div class="detail">cortex-adoption branch · 0.958 parity measured 2026-05-24 · awaiting v2.1.0 publish to re-run full parity suite · expected ≈0.983</div></td>
   <td class="status-cell"><div class="chip c-na">— Future</div><div class="detail">Brain adoption not started · needs cortex-provider-postgres first</div></td>
   <td class="status-cell"><div class="chip c-na">— On hold</div><div class="detail">Codebase in high flux (TCP auth, tunnels, connections all just added). Schema gaps documented. Adopt after stabilisation.</div></td>
 </tr>

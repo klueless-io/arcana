@@ -214,7 +214,7 @@
   </div>
   <div class="method"><div class="m-name">factRetrieval</div><div class="m-status s-impl">✓ done</div>
     <div class="m-consumers"><span class="pill p-parallel">KB <span class="pill-c">parallel</span></span><span class="pill p-unused">KA <span class="pill-c">·</span></span><span class="pill p-needs">KC <span class="pill-c">needs</span></span></div>
-    <div class="m-detail"><span class="driven">v0.4.1 rebase per ADR 011 (2nd port-first application)</span><div class="note">KB-faithful 4-layer flow: direct FTS · entity-name expansion (hop 0) · 1-hop graph (hop 1) · bridge (memories linked to ≥ 2 seed entities) · why field layer-tagged</div><div class="warn">Schema-depth divergence (no fact-level FTS5 in Cortex; rich-bundle return deferred to v2) documented in plan Findings appendix</div></div>
+    <div class="m-detail"><span class="driven">v2.1.0 Gap 1 layered defence (2026-05-24) — 0.958 parity vs KyberBot</span><div class="note">KB-faithful 4-layer flow: direct FTS · entity-name expansion (hop 0) · 1-hop graph (hop 1) · bridge (memories linked to ≥ 2 seed entities) · why field layer-tagged · v2.1.0: DEFAULT_STOPWORDS (30 commons) filter FTS noise · minMatchRatio floor (default 0.2) drops low-overlap facts · minTokenLength 2 · caller-configurable via FactRetrievalInput</div></div>
   </div>
   <div class="method"><div class="m-name">hybridSearch</div><div class="m-status s-impl">✓ done</div>
     <div class="m-consumers"><span class="pill p-parallel">KB <span class="pill-c">parallel</span></span><span class="pill p-unused">KA <span class="pill-c">·</span></span><span class="pill p-needs">KC <span class="pill-c">needs</span></span></div>
@@ -265,18 +265,18 @@
 
 <!-- maintain -->
 <div class="zone">
-  <div class="zone-header"><span class="zone-name">maintain</span><span class="zone-sub">sleep pipeline · entirely stubbed · step-list gap unresolved (ADR 010)</span></div>
-  <div class="method"><div class="m-name">runSleepPipeline</div><div class="m-status s-stub">○ stub</div>
+  <div class="zone-header"><span class="zone-name">maintain</span><span class="zone-sub">sleep pipeline · v1.1.0 implemented (10-step KB-faithful) · swap pending parity gate</span></div>
+  <div class="method"><div class="m-name">runSleepPipeline</div><div class="m-status s-impl">✓ done</div>
     <div class="m-consumers"><span class="pill p-parallel">KB <span class="pill-c">parallel</span></span><span class="pill p-unused">KA <span class="pill-c">·</span></span><span class="pill p-needs">KC <span class="pill-c">needs</span></span></div>
-    <div class="m-detail"><span class="note">13-step pipeline · KyberBot 9 vs Cortex 13 reconciliation deferred (ADR 010)</span><div class="warn">contracts ahead of kernel: surprisalScore, lastReinforcedAt unreachable until sleep lands · expiresAt now surfaced via queryFacts asOf</div></div>
+    <div class="m-detail"><span class="driven">v1.1.0 — ADR 010 resolution + ADR 011 port-first</span><div class="note">10-step pipeline (KB's steps verbatim, camelCase renamed): decayMemories→refreshTags→consolidateMemories→linkMemories→tierMemories→summarizeMemories→observeConversations→rebuildUserProfile→runReasoning→cleanEntityGraph</div><div class="warn">contracts ahead of kernel: surprisalScore, lastReinforcedAt still unreachable until full sleep pipeline ships · expiresAt now surfaced via queryFacts asOf</div></div>
   </div>
-  <div class="method"><div class="m-name">startSleepSchedule</div><div class="m-status s-stub">○ stub</div>
+  <div class="method"><div class="m-name">startSleepSchedule</div><div class="m-status s-impl">✓ done</div>
     <div class="m-consumers"><span class="pill p-parallel">KB <span class="pill-c">parallel</span></span><span class="pill p-unused">KA <span class="pill-c">·</span></span><span class="pill p-needs">KC <span class="pill-c">needs</span></span></div>
-    <div class="m-detail"><span class="note">Scheduler provider integration; entirely stubbed</span></div>
+    <div class="m-detail"><span class="driven">v1.1.0</span><div class="note">Delegates to deps.scheduler.schedule('cortex:sleep-pipeline', intervalMs, cb)</div></div>
   </div>
-  <div class="method"><div class="m-name">stopSleepSchedule</div><div class="m-status s-stub">○ stub</div>
+  <div class="method"><div class="m-name">stopSleepSchedule</div><div class="m-status s-impl">✓ done</div>
     <div class="m-consumers"><span class="pill p-parallel">KB <span class="pill-c">parallel</span></span><span class="pill p-unused">KA <span class="pill-c">·</span></span><span class="pill p-unused">KC <span class="pill-c">·</span></span></div>
-    <div class="m-detail"></div>
+    <div class="m-detail"><span class="driven">v1.1.0</span><div class="note">Calls Scheduler.cancel; mirrors startSleepSchedule</div></div>
   </div>
 </div>
 
@@ -287,7 +287,7 @@
     <div class="s-stat"><div class="s-val v-emerald">22</div><div class="s-label">Implemented</div></div>
     <div class="s-stat"><div class="s-val v-warning">6</div><div class="s-label">Stubbed</div></div>
     <div class="s-stat"><div class="s-val v-error">0</div><div class="s-label">Missing</div></div>
-    <div class="s-stat"><div class="s-val">301</div><div class="s-label">Tests passing</div></div>
+    <div class="s-stat"><div class="s-val">352</div><div class="s-label">Tests passing</div></div>
     <div class="s-stat">
       <div class="s-label" style="margin-bottom:8px">Contracts ahead of kernel</div>
       <span class="tag">surprisalScore</span><span class="tag">lastReinforcedAt</span>
@@ -330,7 +330,7 @@
   }
 
   document.getElementById('copy-btn').addEventListener('click', () => {
-    const lines = ['ARCANA KERNEL METHODS × CONSUMERS — context', ''];
+    const lines = ['CORTEX KERNEL METHODS × CONSUMERS — context', ''];
     let currentZone = null;
     document.querySelectorAll('.method-wrap').forEach(wrap => {
       if (!wrap.querySelector('.row-check').checked) return;
