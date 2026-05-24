@@ -102,14 +102,25 @@ pnpm publish -r --access public --otp "$OTP"
 
 # ── Verify the new version actually landed on npm ────────────────────────────
 # pnpm publish exits 0 even when individual packages 404/fail. Confirm the
-# first package surfaced at the expected version before tagging.
+# first package surfaced at the expected version before tagging. npm CDN can
+# take a few seconds to propagate after a successful publish, so retry a few
+# times before declaring failure.
 
 echo ""
-echo "  [6/6] Verifying npm registry has v${NEW}..."
-PUBLISHED=$(npm view @kybernesis/cortex-contracts version 2>/dev/null || echo "MISSING")
+echo "  [6/6] Verifying npm registry has v${NEW} (with retries for CDN propagation)..."
+PUBLISHED=""
+for attempt in 1 2 3 4 5; do
+  PUBLISHED=$(npm view @kybernesis/cortex-contracts version 2>/dev/null || echo "MISSING")
+  if [[ "$PUBLISHED" == "$NEW" ]]; then
+    break
+  fi
+  echo "        attempt $attempt: registry shows '$PUBLISHED', waiting 3s..."
+  sleep 3
+done
 if [[ "$PUBLISHED" != "$NEW" ]]; then
-  echo "  ✗ Registry shows @kybernesis/cortex-contracts at '$PUBLISHED' (expected '$NEW')."
-  echo "    Publish did not complete. NOT tagging. Investigate before retry."
+  echo "  ✗ Registry still shows @kybernesis/cortex-contracts at '$PUBLISHED' (expected '$NEW')."
+  echo "    Publish did not complete or propagation stalled. NOT tagging."
+  echo "    If npm view shows the right version manually, tag with: git tag v${NEW}"
   exit 1
 fi
 git tag "v${NEW}"
