@@ -145,6 +145,18 @@ export function createIngest(deps: IngestDeps): IngestApi {
         return [];
       }
 
+      // Skip soft-deleted and superseded memories. Extracting from a deleted
+      // memory wastes an LLM call and produces facts the user thought were
+      // gone; extracting from a non-latest version risks stale facts.
+      if (memory.status !== 'active' || memory.isLatest !== true) {
+        deps.logger.debug('cortex.ingest.extractFacts.skipped-inactive', {
+          memoryId,
+          status: memory.status,
+          isLatest: memory.isLatest,
+        });
+        return [];
+      }
+
       // KB guard (fact-extractor.ts:61): skip short conversations.
       if (memory.content.length < 50) {
         deps.logger.debug('cortex.ingest.extractFacts.skipped-short', { memoryId });

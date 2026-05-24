@@ -195,6 +195,41 @@ describe('ingest.extractFacts (v1.0.0)', () => {
     expect(await api.extractFacts('mem_does_not_exist')).toEqual([]);
   });
 
+  it('returns [] for soft-deleted memory without calling the LLM', async () => {
+    let llmCalls = 0;
+    deps.llm = {
+      model: 'fake',
+      complete: async () => {
+        llmCalls++;
+        return '[]';
+      },
+    };
+    api = createIngest(deps);
+    const memId = await seedMemory();
+    // Tombstone the memory after storing.
+    await structured.updateMemory(memId, { status: 'deleted' });
+    const facts = await api.extractFacts(memId);
+    expect(facts).toEqual([]);
+    expect(llmCalls).toBe(0);
+  });
+
+  it('returns [] for non-latest memory version without calling the LLM', async () => {
+    let llmCalls = 0;
+    deps.llm = {
+      model: 'fake',
+      complete: async () => {
+        llmCalls++;
+        return '[]';
+      },
+    };
+    api = createIngest(deps);
+    const memId = await seedMemory();
+    await structured.updateMemory(memId, { isLatest: false });
+    const facts = await api.extractFacts(memId);
+    expect(facts).toEqual([]);
+    expect(llmCalls).toBe(0);
+  });
+
   it('caps to first 3 facts (KB pattern)', async () => {
     deps.llm = makeLLM(JSON.stringify(
       Array.from({ length: 6 }, (_, i) => ({
