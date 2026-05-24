@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { Memory, Entity, Fact, Contradiction, Edge, Insight, EntityProfile, AgentSelf, Chunk } from '@kybernesis/cortex-contracts';
+import Database from 'libsql';
 import { createLibsqlStructuredStore } from './libsql-structured-store.js';
 
 const baseMemory = (): Memory => ({
@@ -64,6 +65,60 @@ describe('LibsqlStructuredStore (in-memory SQLite)', () => {
     const fileStore = createLibsqlStructuredStore(dbPath);
     await expect(fileStore.connect()).resolves.not.toThrow();
     await fileStore.disconnect();
+    rmSync(base, { recursive: true, force: true });
+  });
+
+  it('connect() migrates a v0.x facts table (entity → entities_json, adds category + source_*)', async () => {
+    const base = mkdtempSync(join(tmpdir(), 'cortex-v0x-test-'));
+    const dbPath = join(base, 'arcana.db');
+    // Hand-build a v0.x-shaped facts table with singular `entity` and no
+    // entities_json / category / source_* columns. Mirrors the schema KyberBot
+    // observed on David's test agent (~/dev/ad/brains/.kyberbot/arcana.db).
+    const seedDb = new Database(dbPath);
+    seedDb.exec(`
+      CREATE TABLE facts (
+        id TEXT PRIMARY KEY,
+        fact TEXT NOT NULL,
+        entity TEXT NOT NULL,
+        attribute TEXT,
+        value TEXT,
+        confidence REAL NOT NULL,
+        source_type TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        last_reinforced_at TEXT,
+        expires_at TEXT,
+        is_latest INTEGER NOT NULL DEFAULT 1,
+        superseded_by TEXT,
+        surprisal_score REAL,
+        scopes TEXT
+      );
+    `);
+    seedDb
+      .prepare(
+        `INSERT INTO facts (id, fact, entity, confidence, source_type, created_at, is_latest)
+         VALUES (?, ?, ?, ?, ?, ?, 1)`,
+      )
+      .run('fact_v0_1', 'Alice works at Acme', 'Alice', 0.9, 'ai-extraction', '2025-01-01T00:00:00.000Z');
+    seedDb.close();
+
+    // Open via the provider — migration should run during connect().
+    const store = createLibsqlStructuredStore(dbPath);
+    await store.connect();
+
+    // Round-trip through the kernel API: legacy fact is now retrievable
+    // with v1.0.0+ shape (entities array, category default 'general').
+    const facts = await store.getFactsForEntity('alice');
+    expect(facts.length).toBeGreaterThan(0);
+    const migrated = facts.find((f) => f.id === 'fact_v0_1');
+    expect(migrated).toBeDefined();
+    expect(migrated!.entities).toEqual(['alice']);
+    expect(migrated!.category).toBe('general');
+
+    // FTS index should also have been backfilled — direct fact-FTS finds it.
+    const ftsHits = await store.searchFactsFulltext('Acme');
+    expect(ftsHits.some((m) => m.factId === 'fact_v0_1')).toBe(true);
+
+    await store.disconnect();
     rmSync(base, { recursive: true, force: true });
   });
 

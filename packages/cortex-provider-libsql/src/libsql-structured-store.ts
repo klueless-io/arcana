@@ -285,7 +285,51 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
         mkdirSync(dirname(dbPath), { recursive: true });
       }
       db = new Database(dbPath);
+
+      // v2.1.3 — pre-DDL legacy schema migration. DDL contains indices and
+      // triggers that reference v1.0.0 columns (category, entities_json, etc.);
+      // running them against a v0.x facts table fails. Add missing columns
+      // first, then run DDL, then backfill facts_fts shadow rows.
+      const preDdlFactCols = db
+        .prepare('PRAGMA table_info(facts)')
+        .all() as Array<{ name: string }>;
+      const preDdlFactColNames = new Set(preDdlFactCols.map((c) => c.name));
+      const isLegacyFacts =
+        preDdlFactColNames.size > 0 && !preDdlFactColNames.has('entities_json');
+      if (isLegacyFacts) {
+        db.exec(
+          `ALTER TABLE facts ADD COLUMN entities_json TEXT NOT NULL DEFAULT '[]'`,
+        );
+        db.exec(`ALTER TABLE facts ADD COLUMN source_memory_id TEXT`);
+        db.exec(`ALTER TABLE facts ADD COLUMN source_path TEXT`);
+        db.exec(`ALTER TABLE facts ADD COLUMN source_conversation_id TEXT`);
+        db.exec(
+          `ALTER TABLE facts ADD COLUMN category TEXT NOT NULL DEFAULT 'general'`,
+        );
+        // Backfill entities_json from the legacy singular entity column.
+        // Multi-entity v0.x mirror rows kept only the first entity, so this
+        // recovery is lossy by construction. Lowercase to align with
+        // schema_version 2.
+        if (preDdlFactColNames.has('entity')) {
+          db.exec(
+            `UPDATE facts SET entities_json = json_array(lower(entity))
+             WHERE entities_json = '[]' AND entity IS NOT NULL`,
+          );
+        }
+      }
+
       db.exec(DDL);
+
+      // Backfill facts_fts shadow rows for historical facts. Triggers only
+      // fire on writes after creation; legacy rows that pre-date the virtual
+      // table need a manual seed. No-op on fresh / already-migrated DBs.
+      if (isLegacyFacts) {
+        db.exec(`
+          INSERT INTO facts_fts (fact_id, content, entities)
+          SELECT id, fact, entities_json FROM facts
+          WHERE id NOT IN (SELECT fact_id FROM facts_fts)
+        `);
+      }
 
       // Idempotent migration: add created_at to memories if a v0.3.x database
       // is being opened. PRAGMA table_info returns 0 rows on a freshly-created
@@ -301,6 +345,7 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
 
       // v1.2.0 — meta table + idempotent entity-normalisation migration.
       // schema_version 2 = facts.entities_json values are stored lowercased.
+      // schema_version 3 = v0.x facts table migrated to v1.0.0 columns.
       db.exec(
         `CREATE TABLE IF NOT EXISTS _cortex_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
       );
@@ -308,13 +353,16 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
         .prepare("SELECT value FROM _cortex_meta WHERE key = 'schema_version'")
         .get() as { value: string } | undefined;
       const schemaVersion = versionRow ? Number(versionRow.value) : 1;
+
       if (schemaVersion < 2) {
         // LOWER on the JSON text lowercases the entity-name string values.
         // JSON syntax tokens (brackets, commas, quotes) are all ASCII-stable
         // under LOWER. The AFTER UPDATE trigger keeps facts_fts in sync.
         db.exec(`UPDATE facts SET entities_json = LOWER(entities_json)`);
+      }
+      if (schemaVersion < 3) {
         db.prepare(
-          "INSERT OR REPLACE INTO _cortex_meta (key, value) VALUES ('schema_version', '2')",
+          "INSERT OR REPLACE INTO _cortex_meta (key, value) VALUES ('schema_version', '3')",
         ).run();
       }
     },
