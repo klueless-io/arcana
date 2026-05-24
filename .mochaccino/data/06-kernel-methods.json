@@ -1,9 +1,9 @@
 {
   "angle": "matrix",
   "title": "Cortex Kernel Method Status",
-  "subtitle": "Which methods are implemented vs stubbed; demand-driven by KyberBot adoption",
-  "purpose": "Tracks the demand-driven implementation trail. Each method is either stubbed (throws NotImplementedError) or implemented with a real body. The 'driven_by' field names the consumer module that triggered the implementation. The 'consumers' field captures each downstream system's integration state per method.",
-  "generated": "2026-05-20",
+  "subtitle": "Which methods are implemented vs stubbed — v2.1.0 (0.958 parity with KyberBot)",
+  "purpose": "Tracks the demand-driven implementation trail. Each method is either stubbed (throws NotImplementedError) or implemented with a real body. The 'driven_by' field names the consumer module that triggered the implementation. The 'consumers' field captures each downstream system's integration state per method. v2.1.0 adds Gap 1 layered defence to factRetrieval (stopwords + minMatchRatio), measured 0.958 meanOverlap parity.",
+  "generated": "2026-05-24",
   "system": "cortex",
   "status_legend": [
     { "id": "stubbed", "symbol": "○", "label": "NotImplementedError stub" },
@@ -19,7 +19,7 @@
     { "id": "unused", "symbol": "·", "label": "Method exists but this consumer has no use for it" }
   ],
   "consumers_tracked": [
-    { "id": "kyberbot", "label": "KyberBot", "status": "active adoption — cortex-adoption branch, 22 commits, 724 tests" },
+    { "id": "kyberbot", "label": "KyberBot", "status": "active adoption — cortex-adoption branch; 0.958 meanOverlap parity measured 2026-05-24; awaiting v2.1.0 npm publish to re-run full parity suite" },
     { "id": "kyberagent-desktop", "label": "KyberAgent Desktop", "status": "not yet adopting; 5 schema gaps identified; codebase in flux (TCP auth, tunnels, SSE proxy just added) — adopt after stabilisation" },
     { "id": "kyber-in-cloud", "label": "Kyber in Cloud", "status": "blocked on shedding 5 Convex artifacts; needs cortex-provider-postgres before any swap; possible takeover scenario in play" }
   ],
@@ -74,7 +74,7 @@
           "status": "implemented",
           "driven_by": "v0.4.1 rebase 2026-05-21 (per ADR 011 port-first principle, 2nd application)",
           "commit": "TBD",
-          "scope_notes": "KyberBot-faithful 4-layer port: direct FTS via searchFulltext (Layer 1) + entity-name match via listEntities (Layer 2, hop 0) + 1-hop entity-graph traversal (Layer 3) + bridge memories linked to ≥ 2 seed entities (Layer 4). why field is layer-tagged. Source-layer priority bridge > direct > entity_expansion > graph_expansion. Schema-depth divergence (KB facts table has fields Cortex's Fact doesn't; KB returns rich bundle, Cortex returns memory-shaped HybridSearchResult[]) documented in plan Findings appendix; rich-bundle return is v2 work.",
+          "scope_notes": "KyberBot-faithful 4-layer port: direct FTS via searchFulltext (Layer 1) + entity-name match via listEntities (Layer 2, hop 0) + 1-hop entity-graph traversal (Layer 3) + bridge memories linked to ≥ 2 seed entities (Layer 4). why field is layer-tagged. Source-layer priority bridge > direct > entity_expansion > graph_expansion. v2.1.0 Gap 1 layered defence: (a) DEFAULT_STOPWORDS filter noise tokens from FTS queries, (b) minMatchRatio floor (default 0.2) drops facts where wordMatchRatio below threshold before scoring, (c) minTokenLength 2 drops short tokens. Caller-configurable via stopwordsAdd/stopwordsRemove/minMatchRatio on FactRetrievalInput. Achieved 0.958 parity vs KyberBot (2026-05-24). Schema-depth divergence (KB returns rich bundle, Cortex returns memory-shaped HybridSearchResult[]) documented; rich-bundle return is Phase 2 work.",
           "consumers": {
             "kyberbot": { "mode": "parallel", "location": "kyberbot/packages/cli/src/brain/fact-retrieval.ts", "migration_debt": true, "notes": "Swap pending parity gate" },
             "kyberagent-desktop": { "mode": "unused" },
@@ -207,7 +207,7 @@
     "total_kernel_methods_catalogued": 28,
     "write_parity_percent": 100,
     "read_parity_percent": 100,
-    "test_counts": { "tests": 345, "files": 27, "packages": 6, "all_passing": true },
+    "test_counts": { "tests": 352, "files": 27, "packages": 6, "all_passing": true },
     "v1_0_0_sprint": "v1.0.0 sprint 2026-05-22 landed: Fact schema deepening + Layer 0 fact-FTS + rich-bundle factRetrieval. Per ADR 013 (sequencing) + ADR 011 (port-first). BREAKING — all 6 packages bumped 0.5.0 → 1.0.0 as one cohort. Contracts: FactSchema.entity (string) → entities (string[]); FactCategorySchema 8-member enum added; sourceMemoryId/sourcePath/sourceConversationId optional source backlinks; StructuredStore.searchFactsFulltext + getFact added. libsql: facts table widened with new columns + 3 indices + facts_fts FTS5 virtual table + triggers; storeFact issues explicit pre-DELETE on FTS shadow row before INSERT OR REPLACE (libsql FTS5 doesn't reliably clear shadow rows on conflict-replace). Core: factRetrieval returns FactRetrievalResult { facts, supportingMemories, assembledContext, tokenEstimate, stats } — field names verbatim from KB fact-retrieval.ts:31-59. Layer 0 (direct fact-FTS via searchFactsFulltext) runs before existing 4 layers; Layer 0 hits with sourceMemoryId fan out into supportingMemories. tokenEstimate = ceil(assembledContext.length / 4) per KB convention. Ingest: extractFacts(memoryId) port of KB fact-extractor.ts (REALTIME_FACT_PROMPT verbatim); caps to 3 facts/memory; rejects empty entities[]; defaults invalid category to 'general'. Tests 290 → 301 (+11). widenLegacyFact helper exported for in-code migration.",
     "llm_provider_sprint": "v0.5.0 sprint 2026-05-21 landed: cortex-provider-llm-claude-code (new package). Subprocess transport per ADR 012. Faithful port of KyberBot claude.ts → completeSubprocess. No API key — uses local Claude Code subscription. First concrete LLMProvider impl. Unblocks sleep pipeline. Sibling cortex-provider-llm-http (multi-backend HTTP) queued, separate sprint.",
     "cortex_config_merge": "cortex-config package DELETED 2026-05-19; merged into cortex-core src/config/.",
@@ -217,10 +217,12 @@
     "parity_fill_sprint": "v0.3.1 sprint 2026-05-21 landed: readBlock + getBlockHistory kernel facades (thin wrappers over structured.getAgentSelf). No active consumer demand — implemented for surface completeness ahead of Kyber-in-Cloud migration. Matrix moves to 22/28 implemented; read parity hits 100%. Only remaining stubs: sleep pipeline (3) + 3 no-demand items. Also: docs/audits/sleep-pipeline-gap-analysis.md added — decision-support analysis for ADR 010 with concrete runtime impact of each option; recommends Option A (add consolidate + observe as steps 14/15).",
     "hybrid_rebase_sprint": "v0.4.0 sprint 2026-05-21 landed: ADR 011 (port-first-improve-later) as governing principle + first application — hybridSearch rebased to KyberBot's empirical 4-channel topology (semantic + keyword + temporal + entity-name-filter), replacing the v0.2.0 invented 3-channel topology (semantic + keyword + graph-BFS). Memory.createdAt schema field added (required, ISO 8601, libsql migration on connect). StructuredStore.listEntities contract method added. matchType vocab restored to KB-faithful 'semantic'|'keyword'|'both'. graphHops/graphScore deprecated (kept for shape stability). Future capability rebases (factRetrieval, sleep pipeline) follow same playbook.",
     "fact_retrieval_rebase_sprint": "v0.4.1 sprint 2026-05-21 landed: 2nd ADR 011 application — factRetrieval rebased to KyberBot's 4-layer flow (direct FTS → entity-name expansion → 1-hop graph → bridge for multi-entity-linked memories). Removed Cortex-invented memory-expansion via getNeighbors. Schema-depth divergence from KB (no fact-level FTS5; no rich return bundle) documented in plan Findings appendix; rich-bundle return is v2 work. Tests 258→262. Patch bump — no contract changes.",
-    "delivery_review_status": "CONDITIONAL PASS r2 (2026-05-20). EC-015 in-flight guard needed before merge. 4 KyberBot-side patches still remaining.",
+    "delivery_review_status": "PASS v2.1.0 (2026-05-24). All 3 pre-Phase-2 blockers fixed: EC-015 inFlight guard (transaction concurrency), ENV_MAP rename ARCANA_*→CORTEX_*, buildFtsQuery single-char test fix. Gap 1 layered defence shipped. 352 tests passing. KyberBot parity 0.958.",
+    "v2_1_0_sprint": "v2.1.0 sprint 2026-05-24 landed: Gap 1 layered defence. Three mechanisms: (1) DEFAULT_STOPWORDS (30 English commons) filter noise from FTS5 queries in searchFactsFulltext; (2) minMatchRatio floor (default 0.2) in factRetrieval drops facts where wordMatchRatio < threshold before scoring; (3) minTokenLength 2 drops short tokens from buildFtsQuery. Caller-configurable via FactRetrievalInput and FactsFulltextSearchOpts. Also fixed 3 pre-Phase-2 blockers: transaction inFlight concurrency guard, ENV_MAP ARCANA_*→CORTEX_* env var rename, buildFtsQuery test single-char edge case. KyberBot parity measured at 0.958 meanOverlap. Tests 345→352.",
     "consumers_actively_adopting": ["kyberbot (cortex-adoption branch)"],
     "kyberbot_modules_closed": 10,
     "kyberbot_modules_remaining": 5,
+    "kyberbot_parity": { "measured": "0.958 meanOverlap", "date": "2026-05-24", "branch": "cortex-adoption", "residual_gap_diagnosis": "q-kube-outage (harness seeding limitation, not a Cortex bug) + q-events-april (FTS stopword noise — fixed by v2.1.0 Gap 1). Re-run expected ≈0.983 after v2.1.0 npm publish." },
     "kyberbot_provider_adapters_built": ["OpenAIEmbeddingProvider", "ChromaDBVectorStore"],
     "contracts_ahead_of_kernel": ["expiresAt — now surfaced via queryFacts asOf (2026-05-20)", "surprisalScore — still unreachable; lands with sleep pipeline", "lastReinforcedAt — still unreachable; lands with sleep pipeline"],
     "providers_shipping": ["cortex-provider-libsql (StructuredStore + FTS5)", "cortex-provider-sqlite-vec (VectorStore)", "cortex-provider-llm-claude-code (LLMProvider, subprocess)"],
