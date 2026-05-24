@@ -48,8 +48,8 @@ describe('loadConfig', () => {
   it('applies env overrides on top of defaults', () => {
     const config = loadConfig({
       env: {
-        ARCANA_SLEEP_INTERVAL_MS: '600000',
-        ARCANA_RETRIEVAL_RERANKER_ENABLED: 'true',
+        CORTEX_SLEEP_INTERVAL_MS: '600000',
+        CORTEX_RETRIEVAL_RERANKER_ENABLED: 'true',
       },
     });
     expect(config.sleep.intervalMs).toBe(600_000);
@@ -64,7 +64,7 @@ describe('loadConfig', () => {
     );
     const config = loadConfig({
       filePath,
-      env: { ARCANA_SLEEP_INTERVAL_MS: '60000' },
+      env: { CORTEX_SLEEP_INTERVAL_MS: '60000' },
     });
     expect(config.sleep.intervalMs).toBe(60_000);
   });
@@ -87,25 +87,25 @@ describe('loadConfig', () => {
 
   it('throws on non-numeric value for a numeric env var', () => {
     expect(() =>
-      loadConfig({ env: { ARCANA_SLEEP_INTERVAL_MS: 'not-a-number' } }),
+      loadConfig({ env: { CORTEX_SLEEP_INTERVAL_MS: 'not-a-number' } }),
     ).toThrow();
   });
 
   it('throws on non-boolean value for a boolean env var', () => {
     expect(() =>
-      loadConfig({ env: { ARCANA_RETRIEVAL_RERANKER_ENABLED: 'maybe' } }),
+      loadConfig({ env: { CORTEX_RETRIEVAL_RERANKER_ENABLED: 'maybe' } }),
     ).toThrow();
   });
 
   it('does NOT implicitly read process.env (env must be passed)', () => {
-    // Even if a real ARCANA_* var is set in this process, loadConfig() with
+    // Even if a real CORTEX_* var is set in this process, loadConfig() with
     // no env argument should return defaults.
-    process.env.ARCANA_SLEEP_INTERVAL_MS = '999';
+    process.env.CORTEX_SLEEP_INTERVAL_MS = '999';
     try {
       const config = loadConfig();
       expect(config.sleep.intervalMs).toBe(3_600_000);
     } finally {
-      delete process.env.ARCANA_SLEEP_INTERVAL_MS;
+      delete process.env.CORTEX_SLEEP_INTERVAL_MS;
     }
   });
 });
@@ -128,25 +128,25 @@ describe('loadConfigFromEnv', () => {
   });
 
   it('skips undefined values', () => {
-    expect(loadConfigFromEnv({ ARCANA_SLEEP_INTERVAL_MS: undefined })).toEqual(
+    expect(loadConfigFromEnv({ CORTEX_SLEEP_INTERVAL_MS: undefined })).toEqual(
       {},
     );
   });
 
   it('coerces numbers correctly', () => {
-    expect(loadConfigFromEnv({ ARCANA_DECAY_RATE: '0.05' })).toEqual({
+    expect(loadConfigFromEnv({ CORTEX_DECAY_RATE: '0.05' })).toEqual({
       decay: { rate: 0.05 },
     });
   });
 
   it('coerces booleans correctly', () => {
     expect(
-      loadConfigFromEnv({ ARCANA_RETRIEVAL_RERANKER_ENABLED: 'false' }),
+      loadConfigFromEnv({ CORTEX_RETRIEVAL_RERANKER_ENABLED: 'false' }),
     ).toEqual({ retrieval: { rerankerEnabled: false } });
   });
 
   it('leaves string values uncoerced', () => {
-    expect(loadConfigFromEnv({ ARCANA_LOGGING_LEVEL: 'debug' })).toEqual({
+    expect(loadConfigFromEnv({ CORTEX_LOGGING_LEVEL: 'debug' })).toEqual({
       logging: { level: 'debug' },
     });
   });

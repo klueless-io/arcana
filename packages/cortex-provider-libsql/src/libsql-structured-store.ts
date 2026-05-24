@@ -247,6 +247,7 @@ function rowToEntityProfile(row: Row): EntityProfile {
 
 export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
   let db: Database.Database | null = null;
+  let transactionInFlight = false;
 
   const store: StructuredStore = {
     // ── lifecycle ─────────────────────────────────────────────────────────
@@ -455,19 +456,14 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
       // row itself. Facts mentioning this entity are preserved per the
       // multi-entity schema (v1.0.0 Fact.entities is a list — deleting one
       // entity must not invalidate facts that also reference others).
-      db!.exec('BEGIN');
-      try {
+      await store.transaction(async () => {
         db!.prepare(
           "DELETE FROM edges WHERE (from_type='entity' AND from_id=?) OR (to_type='entity' AND to_id=?)",
         ).run(id, id);
         db!.prepare('DELETE FROM insights WHERE entity_id=?').run(id);
         db!.prepare('DELETE FROM entity_profiles WHERE entity_id=?').run(id);
         db!.prepare('DELETE FROM entities WHERE id=?').run(id);
-        db!.exec('COMMIT');
-      } catch (err) {
-        try { db!.exec('ROLLBACK'); } catch { /* already rolled back */ }
-        throw err;
-      }
+      });
     },
 
     // ── Edge ──────────────────────────────────────────────────────────────
@@ -859,13 +855,19 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
     },
 
     // ── Transaction ───────────────────────────────────────────────────────
-    // v1.2.0 — atomic multi-step writes. better-sqlite3's underlying
-    // statements are synchronous so we drive BEGIN/COMMIT manually around
-    // the async `fn` body. fn receives the same store instance; nested
-    // transactions are not supported (libsql/SQLite has no SAVEPOINT-style
-    // nesting in this wrapper).
+    // v1.2.0 — atomic multi-step writes. libsql statements are synchronous so
+    // we drive BEGIN/COMMIT manually around the async `fn` body. fn receives
+    // the same store instance; nested/concurrent transactions are not
+    // supported — the inFlight guard throws immediately to prevent a second
+    // BEGIN from corrupting an in-progress transaction at an await boundary.
     transaction: async <T>(fn: (tx: StructuredStore) => Promise<T>): Promise<T> => {
       assertConnected(db);
+      if (transactionInFlight) {
+        throw new Error(
+          'LibsqlStructuredStore: concurrent or nested transactions are not supported',
+        );
+      }
+      transactionInFlight = true;
       db.exec('BEGIN');
       try {
         const result = await fn(store);
@@ -874,6 +876,8 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
       } catch (err) {
         try { db.exec('ROLLBACK'); } catch { /* already rolled back */ }
         throw err;
+      } finally {
+        transactionInFlight = false;
       }
     },
   };

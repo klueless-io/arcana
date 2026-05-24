@@ -15,31 +15,31 @@ export interface EnvMapEntry {
  * anywhere in this module — callers must pass `env` explicitly.
  */
 export const ENV_MAP: Record<string, EnvMapEntry> = {
-  ARCANA_SLEEP_INTERVAL_MS: { path: 'sleep.intervalMs', coerce: 'number' },
-  ARCANA_DECAY_RATE: { path: 'decay.rate', coerce: 'number' },
-  ARCANA_DECAY_FLOOR: { path: 'decay.floor', coerce: 'number' },
-  ARCANA_RETRIEVAL_RRF_K: { path: 'retrieval.rrfK', coerce: 'number' },
-  ARCANA_RETRIEVAL_GRAPH_HOPS: { path: 'retrieval.graphHops', coerce: 'number' },
-  ARCANA_RETRIEVAL_RERANKER_ENABLED: {
+  CORTEX_SLEEP_INTERVAL_MS: { path: 'sleep.intervalMs', coerce: 'number' },
+  CORTEX_DECAY_RATE: { path: 'decay.rate', coerce: 'number' },
+  CORTEX_DECAY_FLOOR: { path: 'decay.floor', coerce: 'number' },
+  CORTEX_RETRIEVAL_RRF_K: { path: 'retrieval.rrfK', coerce: 'number' },
+  CORTEX_RETRIEVAL_GRAPH_HOPS: { path: 'retrieval.graphHops', coerce: 'number' },
+  CORTEX_RETRIEVAL_RERANKER_ENABLED: {
     path: 'retrieval.rerankerEnabled',
     coerce: 'boolean',
   },
-  ARCANA_RETRIEVAL_TOP_K: { path: 'retrieval.topK', coerce: 'number' },
-  ARCANA_CHUNKING_SIZE: { path: 'chunking.size', coerce: 'number' },
-  ARCANA_CHUNKING_OVERLAP: { path: 'chunking.overlap', coerce: 'number' },
-  ARCANA_TIER_HOT_PRIORITY_THRESHOLD: {
+  CORTEX_RETRIEVAL_TOP_K: { path: 'retrieval.topK', coerce: 'number' },
+  CORTEX_CHUNKING_SIZE: { path: 'chunking.size', coerce: 'number' },
+  CORTEX_CHUNKING_OVERLAP: { path: 'chunking.overlap', coerce: 'number' },
+  CORTEX_TIER_HOT_PRIORITY_THRESHOLD: {
     path: 'tier.hotPriorityThreshold',
     coerce: 'number',
   },
-  ARCANA_TIER_HOT_RECENCY_DAYS: {
+  CORTEX_TIER_HOT_RECENCY_DAYS: {
     path: 'tier.hotRecencyDays',
     coerce: 'number',
   },
-  ARCANA_TIER_WARM_RECENCY_DAYS: {
+  CORTEX_TIER_WARM_RECENCY_DAYS: {
     path: 'tier.warmRecencyDays',
     coerce: 'number',
   },
-  ARCANA_LOGGING_LEVEL: { path: 'logging.level' },
+  CORTEX_LOGGING_LEVEL: { path: 'logging.level' },
 };
 
 export interface LoadConfigOptions {
