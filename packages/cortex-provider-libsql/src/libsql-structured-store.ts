@@ -293,9 +293,10 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
       // new databases. The check is cheap and avoids throwing on duplicate-add.
       const cols = db.prepare("PRAGMA table_info(memories)").all() as Array<{ name: string }>;
       if (!cols.some((c) => c.name === 'created_at')) {
-        db.exec(
-          `ALTER TABLE memories ADD COLUMN created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
-        );
+        // SQLite rejects non-constant defaults in ALTER TABLE ADD COLUMN.
+        // Two-step: add with empty-string constant default, then backfill.
+        db.exec(`ALTER TABLE memories ADD COLUMN created_at TEXT NOT NULL DEFAULT ''`);
+        db.exec(`UPDATE memories SET created_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE created_at = ''`);
       }
 
       // v1.2.0 — meta table + idempotent entity-normalisation migration.
