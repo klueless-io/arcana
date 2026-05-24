@@ -82,22 +82,38 @@ echo "  [3/5] Running tests..."
 pnpm test
 echo "        Tests OK"
 
-# ── Commit + tag ──────────────────────────────────────────────────────────────
+# ── Commit (no tag yet) ──────────────────────────────────────────────────────
+# Tag is created AFTER successful npm publish — prevents the v2.1.4 problem
+# where a tag existed locally for a version that never reached the registry.
 
-echo "  [4/5] Committing + tagging..."
+echo "  [4/6] Committing version bump..."
 git add packages/*/package.json
 git commit -m "chore: release v${NEW}"
-git tag "v${NEW}"
-echo "        Committed + tagged v${NEW}"
+echo "        Committed (tag will be created after npm publish succeeds)"
 
 # ── Publish ───────────────────────────────────────────────────────────────────
 
 echo ""
-echo "  [5/5] Ready to publish v${NEW} to npm."
+echo "  [5/6] Ready to publish v${NEW} to npm."
 echo "        Enter your npm OTP (or Ctrl-C to abort):"
 read -r OTP
 
 pnpm publish -r --access public --otp "$OTP"
+
+# ── Verify the new version actually landed on npm ────────────────────────────
+# pnpm publish exits 0 even when individual packages 404/fail. Confirm the
+# first package surfaced at the expected version before tagging.
+
+echo ""
+echo "  [6/6] Verifying npm registry has v${NEW}..."
+PUBLISHED=$(npm view @kybernesis/cortex-contracts version 2>/dev/null || echo "MISSING")
+if [[ "$PUBLISHED" != "$NEW" ]]; then
+  echo "  ✗ Registry shows @kybernesis/cortex-contracts at '$PUBLISHED' (expected '$NEW')."
+  echo "    Publish did not complete. NOT tagging. Investigate before retry."
+  exit 1
+fi
+git tag "v${NEW}"
+echo "        Registry confirmed; tagged v${NEW}"
 
 echo ""
 echo "  ✓ v${NEW} published. Push with:"
