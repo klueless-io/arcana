@@ -163,6 +163,7 @@ function rowToMemory(row: Row): Memory {
     status: row.status as Memory['status'],
     isLatest: bool(row.is_latest as number),
     supersededBy: (row.superseded_by as string | null) ?? undefined,
+    lastEnriched: (row.last_enriched as string | null) ?? undefined,
     scopes: row.scopes ? p(row.scopes as string) : undefined,
   };
 }
@@ -186,6 +187,7 @@ function memoryToRow(m: Memory): Row {
     status: m.status,
     is_latest: int(m.isLatest),
     superseded_by: m.supersededBy ?? null,
+    last_enriched: m.lastEnriched ?? null,
     scopes: m.scopes ? j(m.scopes) : null,
   };
 }
@@ -338,11 +340,17 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
       // table only momentarily; after exec(DDL), the column already exists for
       // new databases. The check is cheap and avoids throwing on duplicate-add.
       const cols = db.prepare("PRAGMA table_info(memories)").all() as Array<{ name: string }>;
-      if (!cols.some((c) => c.name === 'created_at')) {
+      const memoryColNames = new Set(cols.map((c) => c.name));
+      if (!memoryColNames.has('created_at')) {
         // SQLite rejects non-constant defaults in ALTER TABLE ADD COLUMN.
         // Two-step: add with empty-string constant default, then backfill.
         db.exec(`ALTER TABLE memories ADD COLUMN created_at TEXT NOT NULL DEFAULT ''`);
         db.exec(`UPDATE memories SET created_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE created_at = ''`);
+      }
+      if (!memoryColNames.has('last_enriched')) {
+        // v2.1.8 — gates the refreshTags step (KBOT H3 Bug 4). NULL on every
+        // existing row so refreshTags treats them all as enrichment candidates.
+        db.exec(`ALTER TABLE memories ADD COLUMN last_enriched TEXT`);
       }
 
       // v2.1.8 — entities table gains created_at + is_pinned (needed by
@@ -397,11 +405,11 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
         INSERT OR REPLACE INTO memories
           (id, title, summary, content, tags, priority, tier, decay_score,
            access_count, created_at, last_accessed_at, is_pinned, content_hash, source,
-           status, is_latest, superseded_by, scopes)
+           status, is_latest, superseded_by, last_enriched, scopes)
         VALUES
           (@id, @title, @summary, @content, @tags, @priority, @tier, @decay_score,
            @access_count, @created_at, @last_accessed_at, @is_pinned, @content_hash, @source,
-           @status, @is_latest, @superseded_by, @scopes)
+           @status, @is_latest, @superseded_by, @last_enriched, @scopes)
       `).run(row);
     },
 
@@ -449,7 +457,8 @@ export function createLibsqlStructuredStore(dbPath: string): StructuredStore {
           access_count=@access_count, created_at=@created_at,
           last_accessed_at=@last_accessed_at,
           is_pinned=@is_pinned, content_hash=@content_hash, source=@source,
-          status=@status, is_latest=@is_latest, superseded_by=@superseded_by, scopes=@scopes
+          status=@status, is_latest=@is_latest, superseded_by=@superseded_by,
+          last_enriched=@last_enriched, scopes=@scopes
         WHERE id=@id
       `).run(row);
     },

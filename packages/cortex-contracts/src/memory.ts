@@ -58,6 +58,14 @@ export const MemorySchema = z
     isLatest: z.boolean(),
     /** When `isLatest` is `false`, the id of the Memory that replaced this one. */
     supersededBy: z.string().min(1).optional(),
+    /**
+     * v2.1.8 — ISO 8601 timestamp of the most recent successful tag /
+     * summary / observation enrichment by the sleep pipeline. NULL on
+     * fresh insert (including mirror writes from consumers like KyberBot),
+     * which is the signal `refreshTags` uses to gate enrichment work.
+     * Mirrors KB memories.last_enriched.
+     */
+    lastEnriched: z.string().datetime().optional(),
     scopes: ScopesSchema.optional(),
   })
   .strict();

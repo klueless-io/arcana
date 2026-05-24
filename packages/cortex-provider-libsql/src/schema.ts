@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS memories (
   status TEXT NOT NULL DEFAULT 'active',
   is_latest INTEGER NOT NULL DEFAULT 1,
   superseded_by TEXT,
+  last_enriched TEXT,
   scopes TEXT
 );
 

@@ -1,11 +1,16 @@
 /**
- * Tag Step — ported from KB sleep/steps/tag.ts.
+ * Tag Step — ported from KB sleep/steps/tag.ts per ADR 011.
  *
- * Refreshes stale or missing tags using the LLM:
- * - Identifies memories with no tags or tags older than tagStaleDays
- * - Generates 3-7 new tags via LLM
- * - Merges with existing tags (deduplication, lowercase)
- * - Limited to maxTagsPerRun to control LLM costs
+ * Refreshes stale or missing tags using the LLM. Gates enrichment on the
+ * `lastEnriched` field (KB memories.last_enriched), NOT on tags.length or
+ * createdAt — that earlier proxy silently skipped any memory that arrived
+ * with pre-populated tags from a mirror write (KBOT H3 Bug 4).
+ *
+ *  - Candidate set: memories where lastEnriched IS NULL OR lastEnriched < staleCutoff
+ *  - LLM generates 3-7 new tags
+ *  - Merged with existing tags (deduplication, lowercase)
+ *  - Limited to maxTagsPerRun to control LLM costs
+ *  - On successful tag write, stamp lastEnriched = now
  *
  * Adapter note: KB uses getClaudeClient() directly. Cortex uses deps.llm.
  */
@@ -38,10 +43,16 @@ export async function runRefreshTags(
     limit: config.maxTagsPerRun * 3,
   });
 
-  // Filter: no tags, or createdAt is before stale cutoff (lastEnriched not on schema;
-  // using createdAt as a proxy — KB uses last_enriched but Cortex doesn't have that field)
+  // KB tag.ts gate: lastEnriched IS NULL OR lastEnriched < staleCutoff.
+  // Mirror writes leave lastEnriched null so they're picked up on the first
+  // sleep cycle.
   const stale = candidates
-    .filter((m) => m.tags.length === 0 || new Date(m.createdAt) < staleCutoff)
+    .filter(
+      (m) =>
+        m.lastEnriched === undefined ||
+        m.lastEnriched === null ||
+        new Date(m.lastEnriched) < staleCutoff,
+    )
     .slice(0, config.maxTagsPerRun);
 
   if (stale.length === 0) return { count: 0 };
@@ -76,7 +87,10 @@ export async function runRefreshTags(
         ]),
       ];
 
-      await deps.structured.updateMemory(memory.id, { tags: merged });
+      await deps.structured.updateMemory(memory.id, {
+        tags: merged,
+        lastEnriched: new Date().toISOString(),
+      });
       tagged++;
     } catch (err) {
       errors.push(`tag failed for ${memory.id}: ${err}`);

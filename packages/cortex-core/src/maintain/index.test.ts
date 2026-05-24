@@ -542,6 +542,59 @@ describe('refreshTags step (LLM)', () => {
     await api.runSleepPipeline({ steps: ['refreshTags'] });
     expect(llm.complete).not.toHaveBeenCalled();
   });
+
+  it('enriches a mirror-write memory even when it arrives with prefix tags (Bug 4 fix)', async () => {
+    // Mirror-write memories from KyberBot arrive with prefix tags like
+    // ['type:conversation', 'entity:Alice', 'topic:planning'] and a null
+    // lastEnriched. Pre-fix gating skipped them because tags.length !== 0.
+    const mirrored = makeMemory({
+      tags: ['type:conversation', 'entity:Alice', 'topic:planning'],
+      title: 'Alice discussed her project plans and timelines with the team during the weekly standup',
+      summary: 'Key decisions were made about the upcoming release schedule and resource allocation for Q3.',
+      lastEnriched: undefined,
+    });
+    const structured = makeStructured({ listMemories: vi.fn().mockResolvedValue([mirrored]) });
+    const llm = { model: 'haiku', complete: vi.fn().mockResolvedValue('["ai", "testing", "code"]') } as unknown as MaintainDeps['llm'];
+    const api = createMaintain(makeDeps({ structured, llm }));
+    await api.runSleepPipeline({ steps: ['refreshTags'] });
+    expect(llm.complete).toHaveBeenCalled();
+    expect(structured.updateMemory).toHaveBeenCalledWith(
+      mirrored.id,
+      expect.objectContaining({
+        tags: expect.any(Array),
+        lastEnriched: expect.any(String),
+      }),
+    );
+  });
+
+  it('skips a memory that was recently enriched (lastEnriched > staleCutoff)', async () => {
+    const recentlyEnriched = makeMemory({
+      tags: [],
+      title: 'Alice discussed her project plans and timelines with the team during the weekly standup',
+      summary: 'Key decisions were made about the upcoming release schedule.',
+      lastEnriched: new Date().toISOString(), // just enriched
+    });
+    const structured = makeStructured({ listMemories: vi.fn().mockResolvedValue([recentlyEnriched]) });
+    const llm = { model: 'haiku', complete: vi.fn() } as unknown as MaintainDeps['llm'];
+    const api = createMaintain(makeDeps({ structured, llm }));
+    await api.runSleepPipeline({ steps: ['refreshTags'] });
+    expect(llm.complete).not.toHaveBeenCalled();
+  });
+
+  it('re-enriches a memory whose lastEnriched is past tagStaleDays', async () => {
+    const oldEnrichment = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(); // 60 days old
+    const stale = makeMemory({
+      tags: ['existing'],
+      title: 'Alice discussed her project plans and timelines with the team during the weekly standup',
+      summary: 'Key decisions were made about the upcoming release schedule.',
+      lastEnriched: oldEnrichment,
+    });
+    const structured = makeStructured({ listMemories: vi.fn().mockResolvedValue([stale]) });
+    const llm = { model: 'haiku', complete: vi.fn().mockResolvedValue('["fresh", "tags"]') } as unknown as MaintainDeps['llm'];
+    const api = createMaintain(makeDeps({ structured, llm }), { tagStaleDays: 30 });
+    await api.runSleepPipeline({ steps: ['refreshTags'] });
+    expect(llm.complete).toHaveBeenCalled();
+  });
 });
 
 describe('summarizeMemories step (LLM)', () => {
