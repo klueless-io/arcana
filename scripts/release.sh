@@ -58,7 +58,7 @@ fi
 
 # ── Bump version in all package.json files ───────────────────────────────────
 
-echo "  [1/5] Bumping versions..."
+echo "  [1/7] Bumping versions..."
 for pkg in "${PACKAGES[@]}"; do
   node -e "
     const fs = require('fs');
@@ -72,13 +72,13 @@ echo "        Done — all packages at $NEW"
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
-echo "  [2/5] Building..."
+echo "  [2/7] Building..."
 pnpm build
 echo "        Build OK"
 
 # ── Test ──────────────────────────────────────────────────────────────────────
 
-echo "  [3/5] Running tests..."
+echo "  [3/7] Running tests..."
 pnpm test
 echo "        Tests OK"
 
@@ -86,7 +86,7 @@ echo "        Tests OK"
 # Tag is created AFTER successful npm publish — prevents the v2.1.4 problem
 # where a tag existed locally for a version that never reached the registry.
 
-echo "  [4/6] Committing version bump..."
+echo "  [4/7] Committing version bump..."
 git add packages/*/package.json
 git commit -m "chore: release v${NEW}"
 echo "        Committed (tag will be created after npm publish succeeds)"
@@ -94,7 +94,7 @@ echo "        Committed (tag will be created after npm publish succeeds)"
 # ── Publish ───────────────────────────────────────────────────────────────────
 
 echo ""
-echo "  [5/6] Ready to publish v${NEW} to npm."
+echo "  [5/7] Ready to publish v${NEW} to npm."
 echo "        Enter your npm OTP (or Ctrl-C to abort):"
 read -r OTP
 
@@ -107,7 +107,7 @@ pnpm publish -r --access public --otp "$OTP"
 # times before declaring failure.
 
 echo ""
-echo "  [6/6] Verifying npm registry has v${NEW} (with retries for CDN propagation)..."
+echo "  [6/7] Verifying npm registry has v${NEW} (with retries for CDN propagation)..."
 PUBLISHED=""
 for attempt in 1 2 3 4 5; do
   PUBLISHED=$(npm view @kybernesis/cortex-contracts version 2>/dev/null || echo "MISSING")
@@ -126,6 +126,12 @@ fi
 git tag "v${NEW}"
 echo "        Registry confirmed; tagged v${NEW}"
 
+# ── Push commit + tag to origin ──────────────────────────────────────────────
+
 echo ""
-echo "  ✓ v${NEW} published. Push with:"
-echo "    git push origin main --tags"
+echo "  [7/7] Pushing to origin..."
+git push origin main --tags
+echo "        Pushed main + tags"
+
+echo ""
+echo "  ✓ v${NEW} released — published, tagged, pushed."
