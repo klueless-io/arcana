@@ -88,8 +88,12 @@ echo "        Tests OK"
 
 echo "  [4/7] Committing version bump..."
 git add packages/*/package.json
-git commit -m "chore: release v${NEW}"
-echo "        Committed (tag will be created after npm publish succeeds)"
+if git diff --cached --quiet; then
+  echo "        Nothing to commit — version bump already recorded (re-run after failed publish?)"
+else
+  git commit -m "chore: release v${NEW}"
+  echo "        Committed (tag will be created after npm publish succeeds)"
+fi
 
 # ── Publish ───────────────────────────────────────────────────────────────────
 
