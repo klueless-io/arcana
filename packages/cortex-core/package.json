@@ -1,6 +1,6 @@
 {
   "name": "@kybernesis/cortex-core",
-  "version": "2.1.10",
+  "version": "2.1.11",
   "description": "Cortex kernel — portable-cortex pattern (ingest, retrieve, maintain, access zones)",
   "license": "MIT",
   "author": "David Cruwys (AppyDave)",
